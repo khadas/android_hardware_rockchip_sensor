@@ -53,7 +53,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-#include "../mma8452_kernel.h"
+#include "mma8452_kernel.h"
 
 #include "AKCommon.h"
 #include "AK8963Driver.h"
