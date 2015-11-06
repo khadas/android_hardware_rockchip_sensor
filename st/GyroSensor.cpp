@@ -24,7 +24,7 @@
 #include <cutils/log.h>
 #include <utils/BitSet.h>
 #include <cutils/properties.h>
-#include <linux/l3g4200d.h>
+#include "l3g4200d.h"
 
 #include "GyroSensor.h"
 #include "MEMSAlgLib_Fusion.h"
