@@ -189,9 +189,19 @@ again:
 
             nineInput.time = getTimestamp()/1000000;
 
+#ifdef FLAG64BIT
+            float offx, offy, offz;
+            offx = 0.0;
+            offy = 0.0;
+            offz = 0.0;
+#else
             FusionTypeDef fusionData = MEMSAlgLib_Fusion_Update(nineInput);
             float offx, offy, offz;
+            offx = 0.0;
+            offy = 0.0;
+            offz = 0.0;
             MEMSAlgLib_Fusion_Get_GyroOffset(&offx,&offy,&offz);
+#endif
             //LOGD("gyro offset: %f, %f, %f", offx, offy, offz);
             mPendingEvent.data[0] = (gyrox-offx) * CONVERT_GYRO_X;
             mPendingEvent.data[1] = (gyroy-offy) * CONVERT_GYRO_Y;

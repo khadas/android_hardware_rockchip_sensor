@@ -4,7 +4,7 @@ LOCAL_PATH := $(call my-dir)
 # hw/<SENSORS_HARDWARE_MODULE_ID>.<ro.product.board>.so
 include $(CLEAR_VARS)
 
-LOCAL_MULTILIB := 32
+LOCAL_MULTILIB := both
 
 LOCAL_CFLAGS += \
 	-Wno-unused-parameter
@@ -40,7 +40,11 @@ LOCAL_SHARED_LIBRARIES := \
 	libutils
 
 #LOCAL_LDFLAGS += $(LOCAL_PATH)/LibFusion_ARM_cpp.a
+ifneq ($(strip $(TARGET_2ND_ARCH)), )
+LOCAL_CFLAGS += -DFLAG64BIT
+else
 LOCAL_LDFLAGS += $(LOCAL_PATH)/MEMSAlgLib_SI_ARM_cpp.a
+endif
 
 ifeq ($(strip $(BOARD_SENSOR_ANGLE)), true)
 LOCAL_CFLAGS += -DANGLE_SUPPORT
