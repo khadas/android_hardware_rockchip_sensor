@@ -18,6 +18,11 @@ LOCAL_MODULE := libmlplatform
 MLSDK_ROOT = .
 MLPLATFORM_DIR = $(MLSDK_ROOT)/platform/linux
 
+LOCAL_CFLAGS += \
+	-Wno-unused-parameter \
+	-Wno-sign-compare \
+	-Wno-extra
+
 LOCAL_CFLAGS += -D_REENTRANT -DLINUX -DANDROID
 LOCAL_CFLAGS += -DCONFIG_MPU_SENSORS_$(DEVICE)
 LOCAL_CFLAGS += -I$(LOCAL_PATH)/$(MLSDK_ROOT)/platform/include
@@ -47,6 +52,12 @@ MLLITE_DIR = $(MLSDK_ROOT)/mllite
 MPL_DIR = $(MLSDK_ROOT)/mldmp
 
 LOCAL_CFLAGS += -D_REENTRANT -DLINUX -DANDROID -DINV_CACHE_DMP=1
+LOCAL_CFLAGS += \
+	-Wno-unused-parameter \
+	-Wno-sign-compare \
+	-Wno-old-style-declaration \
+	-Wno-maybe-uninitialized
+
 LOCAL_CFLAGS += -DCONFIG_MPU_SENSORS_$(DEVICE)
 LOCAL_CFLAGS += -DUNICODE -D_UNICODE -DSK_RELEASE
 LOCAL_CFLAGS += -DI2CDEV=\"/dev/mpu\"

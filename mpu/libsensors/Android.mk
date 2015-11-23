@@ -27,6 +27,9 @@ LOCAL_MODULE_TAGS := optional
 
 LOCAL_CFLAGS := -DLOG_TAG=\"Sensors\"
 
+LOCAL_CFLAGS += \
+	-Wno-unused-parameter
+
 MPU_NAME = MPU6050B1
 #
 # NOTE: official HAL release builds are independent from the device the 
@@ -109,6 +112,10 @@ LOCAL_C_INCLUDES += $(LOCAL_PATH)/../mlsdk/mldmp
 LOCAL_PRELINK_MODULE := false
 LOCAL_MODULE_TAGS := optional
 LOCAL_CFLAGS := -DLOG_TAG=\"Sensors\"
+
+LOCAL_CFLAGS += \
+	-Wno-unused-parameter \
+	-Wno-missing-field-initializers
 
 LOCAL_SRC_FILES := sensors_mpl.cpp 
 LOCAL_SRC_FILES += SensorBase.cpp
