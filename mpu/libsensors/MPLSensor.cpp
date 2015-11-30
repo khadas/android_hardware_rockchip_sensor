@@ -36,6 +36,7 @@
 #include <cutils/log.h>
 #include <cutils/properties.h>
 #include <utils/KeyedVector.h>
+#include <utils/SystemClock.h>
 #include <utils/String8.h>
 #include <string.h>
 
@@ -1261,11 +1262,7 @@ int MPLSensor::update_delay()
 /* return the current time in nanoseconds */
 int64_t MPLSensor::now_ns(void)
 {
-    struct timespec ts;
-
-    clock_gettime(CLOCK_MONOTONIC, &ts);
-    //ALOGV("Time %lld", (int64_t)ts.tv_sec * 1000000000 + ts.tv_nsec);
-    return (int64_t) ts.tv_sec * 1000000000 + ts.tv_nsec;
+    return elapsedRealtimeNano();
 }
 
 int MPLSensor::readEvents(sensors_event_t* data, int count)
