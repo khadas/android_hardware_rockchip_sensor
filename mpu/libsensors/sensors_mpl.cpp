@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#define LOG_NDEBUG 0
+#define LOG_NDEBUG 1
 #define LOG_TAG "Sensors"
 #define FUNC_LOG ALOGV("%s", __PRETTY_FUNCTION__)
 
@@ -35,7 +35,6 @@
 #include "sensors.h"
 #include "MPLSensor.h"
 #include "LightSensor.h"
-//#include "MPLSensorSysApi.h"
 
 /*****************************************************************************/
 
@@ -69,138 +68,101 @@
 
 /* The SENSORS Module */
 struct sensor_t sSensorList[8];
-/*= {
-      { "MPL rotation vector",
-        "Invensense",
-        1, SENSORS_ROTATION_VECTOR_HANDLE,
-        SENSOR_TYPE_ROTATION_VECTOR, 10240.0f, 1.0f, 0.5f, 20000,{ } },
-      { "MPL linear accel",
-        "Invensense",
-        1, SENSORS_LINEAR_ACCEL_HANDLE,
-        SENSOR_TYPE_LINEAR_ACCELERATION, 10240.0f, 1.0f, 0.5f, 20000,{ } },
-      { "MPL gravity",
-        "Invensense",
-        1, SENSORS_GRAVITY_HANDLE,
-        SENSOR_TYPE_GRAVITY, 10240.0f, 1.0f, 0.5f, 20000,{ } },
-      { "MPL Gyro",
-        "Invensense",
-        1, SENSORS_GYROSCOPE_HANDLE,
-        SENSOR_TYPE_GYROSCOPE, 10240.0f, 1.0f, 0.5f, 20000,{ } },
-      { "MPL accel",
-        "Invensense",
-        1, SENSORS_ACCELERATION_HANDLE,
-        SENSOR_TYPE_ACCELEROMETER, 10240.0f, 1.0f, 0.5f, 20000,{ } },
-     { "MPL magnetic field",
-        "Invensense",
-        1, SENSORS_MAGNETIC_FIELD_HANDLE,
-        SENSOR_TYPE_MAGNETIC_FIELD, 10240.0f, 1.0f, 0.5f, 20000,{ } },
-      { "MPL Orientation (android deprecated format)",
-          "Invensense",
-          1, SENSORS_ORIENTATION_HANDLE,
-          SENSOR_TYPE_ORIENTATION, 360.0f, 1.0f, 9.7f, 20000,{ } },
-		 { "Light sensor",
-                 "Dyna Image Corporation",
-                 1,  SENSORS_LIGHT_HANDLE,
-                 SENSOR_TYPE_LIGHT, 10240.0f, 1.0f, 0.5f, 0, { } },
-
-};
-*/
 
 static int open_sensors(const struct hw_module_t* module, const char* id,
                         struct hw_device_t** device);
 
-
 static int sensors__get_sensors_list(struct sensors_module_t* module,
                                      struct sensor_t const** list)
 {
-	sSensorList[0].name       = "MPL rotation vector",
-	sSensorList[0].vendor     = "Invensense",
-	sSensorList[0].version    = 1,
-	sSensorList[0].handle     = SENSORS_ROTATION_VECTOR_HANDLE,
-	sSensorList[0].type       = SENSOR_TYPE_ROTATION_VECTOR,
-	sSensorList[0].maxRange   = 10240.0f,
-	sSensorList[0].resolution = 1.0f,
-	sSensorList[0].power      = 0.5f,
-	sSensorList[0].minDelay   = 20000,      
+    sSensorList[0].name       = "MPL rotation vector",
+    sSensorList[0].vendor     = "Invensense",
+    sSensorList[0].version    = 1,
+    sSensorList[0].handle     = SENSORS_ROTATION_VECTOR_HANDLE,
+    sSensorList[0].type       = SENSOR_TYPE_ROTATION_VECTOR,
+    sSensorList[0].maxRange   = 10240.0f,
+    sSensorList[0].resolution = 1.0f,
+    sSensorList[0].power      = 0.5f,
+    sSensorList[0].minDelay   = 20000,
 
-	sSensorList[1].name       = "MPL linear accel",
-	sSensorList[1].vendor     = "Invensense",
-	sSensorList[1].version    = 1,
-	sSensorList[1].handle     = SENSORS_LINEAR_ACCEL_HANDLE,
-	sSensorList[1].type       = SENSOR_TYPE_LINEAR_ACCELERATION,
-	sSensorList[1].maxRange   = 10240.0f,  
-	sSensorList[1].resolution = 1.0f,      
-	sSensorList[1].power      = 0.5f,      
-	sSensorList[1].minDelay   = 20000,     
+    sSensorList[1].name       = "MPL linear accel",
+    sSensorList[1].vendor     = "Invensense",
+    sSensorList[1].version    = 1,
+    sSensorList[1].handle     = SENSORS_LINEAR_ACCEL_HANDLE,
+    sSensorList[1].type       = SENSOR_TYPE_LINEAR_ACCELERATION,
+    sSensorList[1].maxRange   = 10240.0f,
+    sSensorList[1].resolution = 1.0f,
+    sSensorList[1].power      = 0.5f,
+    sSensorList[1].minDelay   = 20000,
 
-	sSensorList[2].name       = "MPL gravity",
-	sSensorList[2].vendor     = "Invensense",
-	sSensorList[2].version    = 1,
-	sSensorList[2].handle     = SENSORS_GRAVITY_HANDLE,
-	sSensorList[2].type       = SENSOR_TYPE_GRAVITY,
-	sSensorList[2].maxRange   =10240.0f,  
-	sSensorList[2].resolution =1.0f,      
-	sSensorList[2].power      =0.5f,      
-	sSensorList[2].minDelay   =20000,     
+    sSensorList[2].name       = "MPL gravity",
+    sSensorList[2].vendor     = "Invensense",
+    sSensorList[2].version    = 1,
+    sSensorList[2].handle     = SENSORS_GRAVITY_HANDLE,
+    sSensorList[2].type       = SENSOR_TYPE_GRAVITY,
+    sSensorList[2].maxRange   = 10240.0f,
+    sSensorList[2].resolution = 1.0f,
+    sSensorList[2].power      = 0.5f,
+    sSensorList[2].minDelay   = 20000,
 
-	sSensorList[3].name       = "MPL Gyro",
-	sSensorList[3].vendor     = "Invensense",
-	sSensorList[3].version    = 1,
-	sSensorList[3].handle     = SENSORS_GYROSCOPE_HANDLE,
-	sSensorList[3].type       = SENSOR_TYPE_GYROSCOPE,
-	sSensorList[3].maxRange   = 10240.0f,  
-	sSensorList[3].resolution = 1.0f,      
-	sSensorList[3].power      = 0.5f,      
-	sSensorList[3].minDelay   = 20000,     
-	  
-	sSensorList[4].name       = "MPL accel",
-	sSensorList[4].vendor     = "Invensense",
-	sSensorList[4].version    = 1,
-	sSensorList[4].handle     = SENSORS_ACCELERATION_HANDLE,
-	sSensorList[4].type       = SENSOR_TYPE_ACCELEROMETER,
-	sSensorList[4].maxRange   = 10240.0f,  
-	sSensorList[4].resolution = 1.0f,      
-	sSensorList[4].power      = 0.5f,      
-	sSensorList[4].minDelay   = 20000,     
+    sSensorList[3].name       = "MPL Gyro",
+    sSensorList[3].vendor     = "Invensense",
+    sSensorList[3].version    = 1,
+    sSensorList[3].handle     = SENSORS_GYROSCOPE_HANDLE,
+    sSensorList[3].type       = SENSOR_TYPE_GYROSCOPE,
+    sSensorList[3].maxRange   = 10240.0f,
+    sSensorList[3].resolution = 1.0f,
+    sSensorList[3].power      = 0.5f,
+    sSensorList[3].minDelay   = 20000,
 
-	sSensorList[5].name       = "MPL magnetic field",
-	sSensorList[5].vendor     = "Invensense",
-	sSensorList[5].version    = 1,
-	sSensorList[5].handle     = SENSORS_MAGNETIC_FIELD_HANDLE,
-	sSensorList[5].type       = SENSOR_TYPE_MAGNETIC_FIELD,
-	sSensorList[5].maxRange   = 10240.0f,  
-	sSensorList[5].resolution = 1.0f,      
-	sSensorList[5].power      = 0.5f,      
-	sSensorList[5].minDelay   = 20000,     
+    sSensorList[4].name       = "MPL accel",
+    sSensorList[4].vendor     = "Invensense",
+    sSensorList[4].version    = 1,
+    sSensorList[4].handle     = SENSORS_ACCELERATION_HANDLE,
+    sSensorList[4].type       = SENSOR_TYPE_ACCELEROMETER,
+    sSensorList[4].maxRange   = 10240.0f,
+    sSensorList[4].resolution = 1.0f,
+    sSensorList[4].power      = 0.5f,
+    sSensorList[4].minDelay   = 20000,
 
-	sSensorList[6].name       = "MPL Orientation (android deprecated format)",
-	sSensorList[6].vendor     = "Invensense",
-	sSensorList[6].version    = 1,
-	sSensorList[6].handle     = SENSORS_ORIENTATION_HANDLE,
-	sSensorList[6].type       = SENSOR_TYPE_ORIENTATION,
-	sSensorList[6].maxRange   = 10240.0f,  
-	sSensorList[6].resolution = 1.0f,      
-	sSensorList[6].power      = 0.5f,      
-	sSensorList[6].minDelay   = 20000,     
+    sSensorList[5].name       = "MPL magnetic field",
+    sSensorList[5].vendor     = "Invensense",
+    sSensorList[5].version    = 1,
+    sSensorList[5].handle     = SENSORS_MAGNETIC_FIELD_HANDLE,
+    sSensorList[5].type       = SENSOR_TYPE_MAGNETIC_FIELD,
+    sSensorList[5].maxRange   = 10240.0f,
+    sSensorList[5].resolution = 1.0f,
+    sSensorList[5].power      = 0.5f,
+    sSensorList[5].minDelay   = 20000,
 
-	sSensorList[7].name       = "Light sensor",
-	sSensorList[7].vendor     = "Invensense",
-	sSensorList[7].version    = 1,
-	sSensorList[7].handle     = SENSORS_LIGHT_HANDLE,
-	sSensorList[7].type       = SENSOR_TYPE_LIGHT,
-	sSensorList[7].maxRange   = 10240.0f,  
-	sSensorList[7].resolution = 1.0f,      
-	sSensorList[7].power      = 0.5f,      
-	sSensorList[7].minDelay   = 20000,     
-    	
+    sSensorList[6].name       = "MPL Orientation (android deprecated format)",
+    sSensorList[6].vendor     = "Invensense",
+    sSensorList[6].version    = 1,
+    sSensorList[6].handle     = SENSORS_ORIENTATION_HANDLE,
+    sSensorList[6].type       = SENSOR_TYPE_ORIENTATION,
+    sSensorList[6].maxRange   = 10240.0f,
+    sSensorList[6].resolution = 1.0f,
+    sSensorList[6].power      = 0.5f,
+    sSensorList[6].minDelay   = 20000,
+
+    sSensorList[7].name       = "Light sensor",
+    sSensorList[7].vendor     = "Invensense",
+    sSensorList[7].version    = 1,
+    sSensorList[7].handle     = SENSORS_LIGHT_HANDLE,
+    sSensorList[7].type       = SENSOR_TYPE_LIGHT,
+    sSensorList[7].maxRange   = 10240.0f,
+    sSensorList[7].resolution = 1.0f,
+    sSensorList[7].power      = 0.5f,
+    sSensorList[7].minDelay   = 20000,
+
     *list = sSensorList;
     return ARRAY_SIZE(sSensorList);
-}   
-    
+}
+
 static struct hw_module_methods_t sensors_module_methods = {
         open: open_sensors
-};  
-    
+};
+
 struct sensors_module_t HAL_MODULE_INFO_SYM = {
         common: {
                 tag: HARDWARE_MODULE_TAG,
@@ -221,23 +183,16 @@ struct sensors_poll_context_t {
         ~sensors_poll_context_t();
     int activate(int handle, int enabled);
     int setDelay(int handle, int64_t ns);
-    /**
-     * poll events.
-     * @param data 
-     *      用于返回 sensor_event 数据. 
-     * @param count
-     *      .Q :
-     */
     int pollEvents(sensors_event_t* data, int count);
 
 private:
     enum {
-        mpl               = 0,  //all mpl entries must be consecutive and in this order
+        mpl               = 0,  // all mpl entries must be consecutive and in this order
         mpl_accel,
         mpl_timer,
-		  light,
+        light,
         numSensorDrivers,       // wake pipe goes here
-        mpl_power,              //special handle for MPL pm interaction
+        mpl_power,              // special handle for MPL pm interaction
         numFds,
     };
 
@@ -257,7 +212,7 @@ private:
             case ID_M:
             case ID_O:
                 return mpl;
-			case ID_L:
+            case ID_L:
                 return light;
         }
         return -EINVAL;
@@ -270,9 +225,9 @@ sensors_poll_context_t::sensors_poll_context_t()
 {
     FUNC_LOG;
     MPLSensor *p_mplsen = new MPLSensor();
-    
+
     // setup the callback object for handing mpl callbacks
-    setCallbackObject(p_mplsen); 
+    setCallbackObject(p_mplsen);
 
     mSensors[mpl] = p_mplsen;
     mPollFds[mpl].fd = mSensors[mpl]->getFd();
@@ -289,11 +244,11 @@ sensors_poll_context_t::sensors_poll_context_t()
     mPollFds[mpl_timer].events = POLLIN;
     mPollFds[mpl_timer].revents = 0;
 
-	    mSensors[light] = new LightSensor();
+    mSensors[light] = new LightSensor();
     mPollFds[light].fd = mSensors[light]->getFd();
     mPollFds[light].events = POLLIN;
     mPollFds[light].revents = 0;
-	
+
     int wakeFds[2];
     int result = pipe(wakeFds);
     ALOGE_IF(result<0, "error creating wake pipe (%s)", strerror(errno));
@@ -305,7 +260,7 @@ sensors_poll_context_t::sensors_poll_context_t()
     mPollFds[wake].events = POLLIN;
     mPollFds[wake].revents = 0;
 
-    //setup MPL pm interaction handle
+    // setup MPL pm interaction handle
     mPollFds[mpl_power].fd = ((MPLSensor*)mSensors[mpl])->getPowerFd();
     mPollFds[mpl_power].events = POLLIN;
     mPollFds[mpl_power].revents = 0;
@@ -345,7 +300,7 @@ int sensors_poll_context_t::setDelay(int handle, int64_t ns)
 
 int sensors_poll_context_t::pollEvents(sensors_event_t* data, int count)
 {
-    //FUNC_LOG;
+    FUNC_LOG;
     int nbEvents = 0;
     int n = 0;
     int polltime = -1;
@@ -364,14 +319,14 @@ int sensors_poll_context_t::pollEvents(sensors_event_t* data, int count)
                 nbEvents += nb;
                 data += nb;
 
-                //special handling for the mpl, which has multiple handles
+                // special handling for the mpl, which has multiple handles
                 if(i==mpl) {
-                    i+=2; //skip accel and timer
+                    i+=2; // skip accel and timer
                     mPollFds[mpl_accel].revents = 0;
                     mPollFds[mpl_timer].revents = 0;
                 }
                 if(i==mpl_accel) {
-                    i+=1; //skip timer
+                    i+=1; // skip timer
                     mPollFds[mpl_timer].revents = 0;
                 }
             }
@@ -437,14 +392,14 @@ static int poll__setDelay(struct sensors_poll_device_t *dev,
 static int poll__poll(struct sensors_poll_device_t *dev,
                       sensors_event_t* data, int count)
 {
-    //FUNC_LOG;
+    FUNC_LOG;
     sensors_poll_context_t *ctx = (sensors_poll_context_t *)dev;
     return ctx->pollEvents(data, count);
 }
 
 /*****************************************************************************/
 
-/** Open a new instance of a sensor device using name */
+/* Open a new instance of a sensor device using name */
 static int open_sensors(const struct hw_module_t* module, const char* id,
                         struct hw_device_t** device)
 {
@@ -467,5 +422,3 @@ static int open_sensors(const struct hw_module_t* module, const char* id,
 
     return status;
 }
-
-
