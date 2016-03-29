@@ -504,7 +504,7 @@ int MmaSensor::readEvents(sensors_event_t* data, int count)
                 D("mPendingMask = 0x%x, j = %d; (mPendingMask & (1<<j)) = 0x%x", mPendingMask, j, (mPendingMask & (1<<j)) );
                 if (mPendingMask & (1<<j)) {
                     mPendingMask &= ~(1<<j);
-                    mPendingEvents[j].timestamp = time;
+                    mPendingEvents[j].timestamp = getTimestamp();
                     D( "mEnabled = 0x%x, j = %d; mEnabled & (1<<j) = 0x%x.", mEnabled, j, (mEnabled & (1 << j) ) );
                     if (mEnabled & (1<<j)) {
                         *data++ = mPendingEvents[j];
