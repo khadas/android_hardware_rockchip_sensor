@@ -13,117 +13,233 @@
 # limitations under the License.
 # Modified 2011 by InvenSense, Inc
 
-
 LOCAL_PATH := $(call my-dir)
+#COMPILE_COMPASS_YAS537 := 1
+COMPILE_COMPASS_AK8975 := 1
 
 ifneq ($(TARGET_SIMULATOR),true)
+
+ifeq (${TARGET_ARCH},arm64)
+
+include $(CLEAR_VARS)
+LOCAL_MODULE_SUFFIX := .so
+LOCAL_MODULE := libmplmpu
+LOCAL_MODULE_CLASS := SHARED_LIBRARIES
+LOCAL_SRC_FILES_arm := libmplmpu.so
+LOCAL_32_BIT_ONLY := true
+include $(BUILD_PREBUILT)
+
+include $(CLEAR_VARS)
+LOCAL_MODULE_SUFFIX := .so
+LOCAL_MODULE := libmplmpu
+LOCAL_MODULE_CLASS := SHARED_LIBRARIES
+LOCAL_SRC_FILES_arm64 := libmplmpu_64.so
+include $(BUILD_PREBUILT)
+
+else
+
+include $(CLEAR_VARS)
+LOCAL_PREBUILT_LIBS := libmplmpu.so
+LOCAL_MODULE_TAGS := optional
+include $(BUILD_MULTI_PREBUILT)
+
+endif
+
+
+ifeq (${TARGET_ARCH},arm64)
+
+include $(CLEAR_VARS)
+LOCAL_MODULE_SUFFIX := .so
+LOCAL_MODULE := libmllite
+LOCAL_MODULE_CLASS := SHARED_LIBRARIES
+LOCAL_SRC_FILES_arm := libmllite.so
+LOCAL_32_BIT_ONLY := true
+include $(BUILD_PREBUILT)
+
+include $(CLEAR_VARS)
+LOCAL_MODULE_SUFFIX := .so
+LOCAL_MODULE := libmllite
+LOCAL_MODULE_CLASS := SHARED_LIBRARIES
+LOCAL_SRC_FILES_arm64 := libmllite_64.so
+include $(BUILD_PREBUILT)
+
+else
+
+include $(CLEAR_VARS)
+LOCAL_PREBUILT_LIBS := libmllite.so
+LOCAL_MODULE_TAGS := optional
+include $(BUILD_MULTI_PREBUILT)
+
+endif
+
+
 
 # InvenSense fragment of the HAL
 include $(CLEAR_VARS)
 
+ifeq (${TARGET_ARCH},arm64)
+BIN_PATH := inv_64
+else
+BIN_PATH := inv_32
+endif
+
 LOCAL_MODULE := libinvensense_hal
 
+$(info LOCAL_MODULE=$(LOCAL_MODULE))
+$(info TARGET_ARCH=$(TARGET_ARCH))
 LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE_OWNER := invensense
 
 LOCAL_CFLAGS := -DLOG_TAG=\"Sensors\"
 
-LOCAL_CFLAGS += \
-	-Wno-unused-parameter
+# ANDROID version check
+MAJOR_VERSION :=$(shell echo $(PLATFORM_VERSION) | cut -f1 -d.)
+MINOR_VERSION :=$(shell echo $(PLATFORM_VERSION) | cut -f2 -d.)
+VERSION_JB :=$(shell test $(MAJOR_VERSION) -gt 4 -o $(MAJOR_VERSION) -eq 4 -a $(MINOR_VERSION) -gt 0 && echo true)
+$(info MAJOR_VERSION=$(MAJOR_VERSION))
+$(info MINOR_VERSION=$(MINOR_VERSION))
+$(info VERSION_JB=$(VERSION_JB))
+#ANDROID version check END
 
-MPU_NAME = MPU6050B1
-#
-# NOTE: official HAL release builds are independent from the device the 
-#       underlying MPL and kernel driver is build with. 
-#       Therefore the MPU_NAME define should be kept empty or undefined.
-#
-#       Un-official or engineering builds might contains cross-device code
-#       that needs to be compiled with one of the following defines 
-#       CONFIG_MPU_SENSORS_MPUxxxx; in that case defining MPU_NAME equal to one 
-#       of MPU3050, MPU6050A2, or MPU6050B1 provides the necessary definition.
-#       e.g. when using a top level make, add MPU_NAME=MPUxxxx to the 
-#            command line.
-#            when using mmm, export MPU_NAME=MPUxxxx prior to running the build
-#            and use 'mmm -e' to honor the environment variables' settings.
-#
-ifeq ($(MPU_NAME),MPU3050)
-LOCAL_CFLAGS += -DCONFIG_MPU_SENSORS_MPU3050=1
-endif
-ifeq ($(MPU_NAME),MPU6050A2)
-LOCAL_CFLAGS += -DCONFIG_MPU_SENSORS_MPU6050A2=1
-endif
-ifeq ($(MPU_NAME),MPU6050B1)
-LOCAL_CFLAGS += -DCONFIG_MPU_SENSORS_MPU6050B1=1
+ifeq ($(VERSION_JB),true)
+LOCAL_CFLAGS += -DANDROID_JELLYBEAN
 endif
 
-LOCAL_SRC_FILES := SensorBase.cpp
-LOCAL_SRC_FILES += MPLSensor.cpp MyTransform.cpp
-#LOCAL_SRC_FILES += MPLSensorSysApi.cpp
+ifneq (,$(filter $(TARGET_BUILD_VARIANT),eng userdebug))
+ifneq ($(COMPILE_INVENSENSE_COMPASS_CAL),0)
+LOCAL_CFLAGS += -DINVENSENSE_COMPASS_CAL
+endif
+ifeq ($(COMPILE_THIRD_PARTY_ACCEL),1)
+LOCAL_CFLAGS += -DTHIRD_PARTY_ACCEL
+endif
+ifeq ($(COMPILE_COMPASS_YAS537),1)
+LOCAL_CFLAGS += -DCOMPASS_YAS537
+endif
+ifeq ($(COMPILE_COMPASS_AK8975),1)
+LOCAL_CFLAGS += -DCOMPASS_AK8975
+endif
+ifeq ($(COMPILE_COMPASS_AMI306),1)
+LOCAL_CFLAGS += -DCOMPASS_AMI306
+endif
+else # release builds, default
+LOCAL_CFLAGS += -DINVENSENSE_COMPASS_CAL
+endif
 
-LOCAL_C_INCLUDES += $(LOCAL_PATH)/../mlsdk/platform/include
-LOCAL_C_INCLUDES += $(LOCAL_PATH)/../mlsdk/platform/include/linux
-LOCAL_C_INCLUDES += $(LOCAL_PATH)/../mlsdk/platform/linux
-LOCAL_C_INCLUDES += $(LOCAL_PATH)/../mlsdk/mllite
-LOCAL_C_INCLUDES += $(LOCAL_PATH)/../mlsdk/mldmp
-LOCAL_C_INCLUDES += $(LOCAL_PATH)/../mlsdk/external/aichi
-LOCAL_C_INCLUDES += $(LOCAL_PATH)/../mlsdk/external/akmd
-LOCAL_C_INCLUDES += $(LOCAL_PATH)/../mlsdk/external/memsic
-LOCAL_C_INCLUDES += $(LOCAL_PATH)/../mlsdk/external/akm8963
-LOCAL_C_INCLUDES += ./frameworks/native/services/surfaceflinger
+LOCAL_SRC_FILES += SensorBase.cpp
+LOCAL_SRC_FILES += MPLSensor.cpp
+LOCAL_SRC_FILES += MPLSupport.cpp
+LOCAL_SRC_FILES += InputEventReader.cpp
 
-LOCAL_SHARED_LIBRARIES := liblog libcutils libutils libdl
-LOCAL_SHARED_LIBRARIES += libmllite libmlplatform
+ifneq (,$(filter $(TARGET_BUILD_VARIANT),eng userdebug))
+ifeq ($(COMPILE_INVENSENSE_COMPASS_CAL),0)
+LOCAL_SRC_FILES += AkmSensor.cpp
+LOCAL_SRC_FILES += CompassSensor.AKM.cpp
+else ifeq ($(COMPILE_COMPASS_AMI306),1)
+LOCAL_SRC_FILES += CompassSensor.IIO.primary.cpp
+else ifeq ($(COMPILE_COMPASS_YAS537),1)
+LOCAL_SRC_FILES += CompassSensor.YAMAHA.cpp
+LOCAL_SRC_FILES += YamahaSensor.cpp
+else
+LOCAL_SRC_FILES += CompassSensor.IIO.9150.cpp
+endif
+else # release builds, default
+LOCAL_SRC_FILES += CompassSensor.IIO.9150.cpp
+endif #userdebug
 
-#Additions for SysPed
+LOCAL_C_INCLUDES += $(LOCAL_PATH)/$(BIN_PATH)/core/mllite
+LOCAL_C_INCLUDES += $(LOCAL_PATH)/$(BIN_PATH)/core/mllite/linux
+LOCAL_C_INCLUDES += $(LOCAL_PATH)/$(BIN_PATH)/core/driver/include
+LOCAL_C_INCLUDES += $(LOCAL_PATH)/$(BIN_PATH)/core/driver/include/linux
+#LOCAL_C_INCLUDES += $(LOCAL_PATH)/yamaha/inc
+#LOCAL_C_INCLUDES += $(LOCAL_PATH)/yamaha/lib
+
+LOCAL_SHARED_LIBRARIES := liblog
+LOCAL_SHARED_LIBRARIES += libcutils
+LOCAL_SHARED_LIBRARIES += libutils
+LOCAL_SHARED_LIBRARIES += libdl
+LOCAL_SHARED_LIBRARIES += libmllite
+#LOCAL_SHARED_LIBRARIES += libyasalgo
+
+# Additions for SysPed
 LOCAL_SHARED_LIBRARIES += libmplmpu
-LOCAL_C_INCLUDES += $(LOCAL_PATH)/mlsdk/mldmp
-
+LOCAL_C_INCLUDES += $(LOCAL_PATH)/$(BIN_PATH)/core/mpl
 LOCAL_CPPFLAGS += -DLINUX=1
-LOCAL_CPPFLAGS += -DMPL_LIB_NAME=\"libmplmpu.so\"
-LOCAL_CPPFLAGS += -DAICHI_LIB_NAME=\"libami.so\"
-LOCAL_CPPFLAGS += -DAKM_LIB_NAME=\"libakmd.so\"
-LOCAL_CPPFLAGS += -DAKM8963_LIB_NAME=\"libakm8963.so\"
-LOCAL_CPPFLAGS += -DMEMSIC_LIB_NAME=\"libmemsic.so\"
 LOCAL_PRELINK_MODULE := false
 
 include $(BUILD_SHARED_LIBRARY)
 
 endif # !TARGET_SIMULATOR
 
-# -------------------------------------- #
-
 # Build a temporary HAL that links the InvenSense .so
 include $(CLEAR_VARS)
-LOCAL_MODULE := sensors.$(TARGET_BOARD_HARDWARE)
-LOCAL_MODULE_PATH := $(TARGET_OUT_SHARED_LIBRARIES)/hw
 
-# Additions for SysPed
+ifeq (${TARGET_ARCH},arm64)
+BIN_PATH := inv_64
+else
+BIN_PATH := inv_32
+endif
+
+ifneq ($(filter manta grouper tilapia, $(TARGET_DEVICE)),)
+LOCAL_MODULE := sensors.invensense
+else
+LOCAL_MODULE := sensors.${TARGET_PRODUCT}
+endif
+LOCAL_MODULE := sensors.rk30board
+
+ifdef TARGET_2ND_ARCH
+LOCAL_MODULE_RELATIVE_PATH := hw
+else
+LOCAL_MODULE_PATH := $(TARGET_OUT_SHARED_LIBRARIES)/hw
+endif
+
 LOCAL_SHARED_LIBRARIES += libmplmpu
-LOCAL_C_INCLUDES += $(LOCAL_PATH)/../mlsdk/platform/include
-LOCAL_C_INCLUDES += $(LOCAL_PATH)/../mlsdk/platform/include/linux
-LOCAL_C_INCLUDES += $(LOCAL_PATH)/../mlsdk/platform/linux
-LOCAL_C_INCLUDES += $(LOCAL_PATH)/../mlsdk/mllite
-LOCAL_C_INCLUDES += $(LOCAL_PATH)/../mlsdk/mldmp
-LOCAL_C_INCLUDES += $(LOCAL_PATH)/../mlsdk/external/aichi
-LOCAL_C_INCLUDES += $(LOCAL_PATH)/../mlsdk/external/akmd
-LOCAL_C_INCLUDES += $(LOCAL_PATH)/../mlsdk/external/akm8963
-LOCAL_C_INCLUDES += $(LOCAL_PATH)/../mlsdk/external/memsic
-LOCAL_C_INCLUDES += $(LOCAL_PATH)/../mlsdk/mldmp
+LOCAL_C_INCLUDES += $(LOCAL_PATH)/$(BIN_PATH)/core/mllite
+LOCAL_C_INCLUDES += $(LOCAL_PATH)/$(BIN_PATH)/core/mllite/linux
+LOCAL_C_INCLUDES += $(LOCAL_PATH)/$(BIN_PATH)/core/mpl
+LOCAL_C_INCLUDES += $(LOCAL_PATH)/$(BIN_PATH)/core/driver/include
+LOCAL_C_INCLUDES += $(LOCAL_PATH)/$(BIN_PATH)/core/driver/include/linux
 
 LOCAL_PRELINK_MODULE := false
 LOCAL_MODULE_TAGS := optional
 LOCAL_CFLAGS := -DLOG_TAG=\"Sensors\"
 
-LOCAL_CFLAGS += \
-	-Wno-unused-parameter \
-	-Wno-missing-field-initializers
+ifeq ($(VERSION_JB),true)
+LOCAL_CFLAGS += -DANDROID_JELLYBEAN
+endif
 
-LOCAL_SRC_FILES := sensors_mpl.cpp 
-LOCAL_SRC_FILES += SensorBase.cpp
-LOCAL_SRC_FILES += InputEventReader.cpp
-LOCAL_SRC_FILES += LightSensor.cpp
-LOCAL_SRC_FILES += SamsungSensorBase.cpp
+ifneq (,$(filter $(TARGET_BUILD_VARIANT),eng userdebug))
+ifneq ($(COMPILE_INVENSENSE_COMPASS_CAL),0)
+LOCAL_CFLAGS += -DINVENSENSE_COMPASS_CAL
+endif
+ifeq ($(COMPILE_THIRD_PARTY_ACCEL),1)
+LOCAL_CFLAGS += -DTHIRD_PARTY_ACCEL
+endif
+ifeq ($(COMPILE_COMPASS_YAS537),1)
+LOCAL_CFLAGS += -DCOMPASS_YAS537
+endif
+ifeq ($(COMPILE_COMPASS_AK8975),1)
+LOCAL_CFLAGS += -DCOMPASS_AK8975
+endif
+ifeq ($(COMPILE_COMPASS_AMI306),1)
+LOCAL_CFLAGS += -DCOMPASS_AMI306
+endif
+else # release builds, default
+LOCAL_CFLAGS += -DINVENSENSE_COMPASS_CAL
+endif # userdebug
 
-LOCAL_SHARED_LIBRARIES := libinvensense_hal libcutils libutils libdl
+ifneq ($(filter manta grouper tilapia, $(TARGET_DEVICE)),)
+LOCAL_SRC_FILES := sensors_mpl.cpp
+else
+LOCAL_SRC_FILES := sensors_mpl.cpp
+endif
+
+LOCAL_SHARED_LIBRARIES := libinvensense_hal
+LOCAL_SHARED_LIBRARIES += libcutils
+LOCAL_SHARED_LIBRARIES += libutils
+LOCAL_SHARED_LIBRARIES += libdl
+LOCAL_SHARED_LIBRARIES += liblog
+LOCAL_SHARED_LIBRARIES += libmllite
 include $(BUILD_SHARED_LIBRARY)
+
 
 
