@@ -88,6 +88,7 @@ static int hertz_request = 200;
 #define HW_ACCEL_RATE_HZ                (1000 / hertz_request)
 #define HW_COMPASS_RATE_HZ              (1000000000LL / hertz_request)
 
+#define MAX_RATE						1000000LL
 #define RATE_200HZ                      5000000LL
 #define RATE_15HZ                       66667000LL
 #define RATE_5HZ                        200000000LL
@@ -2009,8 +2010,8 @@ int MPLSensor::setDelay(int32_t handle, int64_t ns)
             "setDelay : %llu ns, (%.2f Hz)", ns, 1000000000.f / ns);
 
     // limit all rates to reasonable ones */
-    if (ns < 5000000LL) {
-        ns = 5000000LL;
+    if (ns < MAX_RATE) {
+        ns = MAX_RATE;
     }
 
     /* store request rate to mDelays arrary for each sensor */
@@ -2414,6 +2415,28 @@ int MPLSensor::readEvents(sensors_event_t* data, int count)
     return numEventReceived;
 }
 
+#if DEBUG_DELAY
+#define NSEC_PER_SEC            1000000000
+
+static inline int64_t timespec_to_ns(const struct timespec *ts)
+{
+	return ((int64_t) ts->tv_sec * NSEC_PER_SEC) + ts->tv_nsec;
+}
+
+static int64_t get_time_ns(void)
+{
+	struct timespec ts;
+	clock_gettime(CLOCK_MONOTONIC, &ts);
+	return timespec_to_ns(&ts);
+}
+
+static int64_t tm_min=0;
+static int64_t tm_max=0;
+static int64_t tm_sum=0;
+static int64_t tm_last_print=0;
+static int64_t tm_count=0;
+#endif
+
 // collect data for MPL (but NOT sensor service currently), from driver layer
 void MPLSensor::buildMpuEvent(void)
 {
@@ -2523,7 +2546,30 @@ void MPLSensor::buildMpuEvent(void)
         mask |= 1 << MagneticField;
     }
 
-    mSensorTimestamp = *((long long *) (rdata + 8 * sensors));
+	mSensorTimestamp = *((long long *) (rdata + 8 * sensors));
+
+	#if DEBUG_DELAY
+	int64_t tm_cur = get_time_ns();
+	int64_t tm_delta = tm_cur - mSensorTimestamp;
+	if (tm_min==0 && tm_max==0)
+		tm_min = tm_max = tm_delta;
+	else if (tm_delta < tm_min)
+		tm_min = tm_delta;
+	else if (tm_delta > tm_max)
+		tm_max = tm_delta;
+	tm_sum += tm_delta;
+	tm_count++;
+	
+	if ((tm_cur-tm_last_print) > 1000000000) {
+		LOGD("HAL Time: [%lld] %lld,%lld,%lld\n", mSensorTimestamp, tm_min, (tm_sum/tm_count), tm_max);
+		tm_last_print = tm_cur;
+		tm_min = tm_max = tm_count = tm_sum = 0;
+	}
+	#endif
+
+//	  int64_t n = get_time_ns();
+//	  ALOGD("MPU HAL: tm=%lld, %lld, %lld\n", mSensorTimestamp, n, n-mSensorTimestamp);
+
     if (mCompassSensor->isIntegrated()) {
         mCompassTimestamp = mSensorTimestamp;
     }
