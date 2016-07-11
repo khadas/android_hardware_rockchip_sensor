@@ -15,7 +15,7 @@
 
 LOCAL_PATH := $(call my-dir)
 #COMPILE_COMPASS_YAS537 := 1
-COMPILE_COMPASS_AK8975 := 1
+COMPILE_INVENSENSE_COMPASS_CAL := 0
 
 ifneq ($(TARGET_SIMULATOR),true)
 
@@ -143,7 +143,8 @@ else
 LOCAL_SRC_FILES += CompassSensor.IIO.9150.cpp
 endif
 else # release builds, default
-LOCAL_SRC_FILES += CompassSensor.IIO.9150.cpp
+LOCAL_SRC_FILES += AkmSensor.cpp
+LOCAL_SRC_FILES += CompassSensor.AKM.cpp
 endif #userdebug
 
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/$(BIN_PATH)/core/mllite

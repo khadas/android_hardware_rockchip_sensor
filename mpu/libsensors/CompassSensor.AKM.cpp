@@ -148,7 +148,7 @@ void CompassSensor::fillList(struct sensor_t *list)
     }
 
     LOGE("HAL:unsupported compass id %s -- "
-         "this implementation only supports AKM compasses");
+         "this implementation only supports AKM compasses", compass);
     list->maxRange = COMPASS_AKM8975_RANGE;
     list->resolution = COMPASS_AKM8975_RESOLUTION;
     list->power = COMPASS_AKM8975_POWER;

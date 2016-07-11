@@ -92,6 +92,8 @@ enum {
 // conversion of magnetic data to uT units
 #define CONVERT_M                   (0.06f)
 
+#define AKM_DEVICE_NAME     "/dev/compass"
+
 __END_DECLS
 
 #endif  // ANDROID_SENSORS_H
