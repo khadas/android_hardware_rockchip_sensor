@@ -26,15 +26,13 @@
 #include <cutils/log.h>
 
 #include "AkmSensor.h"
-
+#include "akm8975.h"
 #define AKMD_DEFAULT_INTERVAL	200000000
-
-#define AKM_SYSFS_PATH	"/sys/class/compass/akm09911/"
 
 /*****************************************************************************/
 
 AkmSensor::AkmSensor()
-: SensorBase(NULL, "compass"),
+: SensorBase(AKM_DEVICE_NAME, "compass"),
       //mPendingMask(0),
       mInputReader(32)
 {
@@ -47,13 +45,6 @@ AkmSensor::AkmSensor()
     //mPendingEvents.magnetic.status = SENSOR_STATUS_ACCURACY_HIGH;
     //memset(mPendingEvents.data, 0, sizeof(mPendingEvents.data));
 
-    if (data_fd) {
-        strcpy(input_sysfs_path, AKM_SYSFS_PATH);
-        input_sysfs_path_len = strlen(input_sysfs_path);
-    } else {
-        input_sysfs_path[0] = '\0';
-        input_sysfs_path_len = 0;
-    }
     setEnable(ID_M, 0);
 }
 
@@ -85,39 +76,42 @@ int AkmSensor::setEnable(int32_t handle, int enabled)
 {
     int id = (int)handle;
     int err = 0;
-    char buffer[2];
-
+	int cmd;
+	int newState;
+	short flags;
+	
     switch (id) {
         case ID_M:
-            strcpy(&input_sysfs_path[input_sysfs_path_len], "enable_mag");
+			cmd = ECS_IOCTL_APP_SET_MFLAG;
             break;
 	default:
             LOGE("AkmSensor: unknown handle (%d)", handle);
             return -EINVAL;
     }
 
-    buffer[0] = '\0';
-    buffer[1] = '\0';
-
     if (mEnabled <= 0) {
-        if (enabled) buffer[0] = '1';
-    } else if (mEnabled == 1) {
-        if (!enabled) buffer[0] = '0';
-    }
-
-    if (buffer[0] != '\0') {
-        err = write_sys_attribute(input_sysfs_path, buffer, 1);
-        if (err != 0) {
-            return err;
-        }
-        LOGD("AkmSensor: set %s to %s",
-                &input_sysfs_path[input_sysfs_path_len], buffer);
-
-        /* for AKMD specification */
-        if (buffer[0] == '1') {
+        if (enabled) {
+            open_device();
+			flags = 1;
+			err = ioctl(dev_fd, cmd, &flags);
+			if (err < 0) {
+				LOGE("ECS_IOCTL_APP_SET_XXX failed (%s)", strerror(-err));
+				return err;
+			}
+			LOGD("AkmSensor: enable");
             setDelay(handle, AKMD_DEFAULT_INTERVAL);
-        } else {
-            setDelay(handle, -1);
+        }
+    } else if (mEnabled == 1) {
+        if (!enabled) {
+			flags = 0;
+			err = ioctl(dev_fd, cmd, &flags);
+			if (err < 0) {
+				LOGE("ECS_IOCTL_APP_SET_XXX failed (%s)", strerror(-err));
+				return err;
+			}
+			LOGD("AkmSensor: disable");
+			setDelay(handle, -1);
+			close_device();
         }
     }
 
@@ -138,7 +132,7 @@ int AkmSensor::setDelay(int32_t handle, int64_t ns)
     int id = (int)handle;
     int err = 0;
     char buffer[32];
-    int bytes;
+    int cmd;
 
     if (ns < -1 || 2147483647 < ns) {
         LOGE("AkmSensor: invalid delay (%lld)", ns);
@@ -147,7 +141,7 @@ int AkmSensor::setDelay(int32_t handle, int64_t ns)
 
     switch (id) {
         case ID_M:
-            strcpy(&input_sysfs_path[input_sysfs_path_len], "delay_mag");
+			cmd = ECS_IOCTL_APP_SET_DELAY;
             break;
         default:
             LOGE("AkmSensor: unknown handle (%d)", handle);
@@ -155,12 +149,11 @@ int AkmSensor::setDelay(int32_t handle, int64_t ns)
     }
 
     if (ns != mDelay) {
-        bytes = sprintf(buffer, "%lld", ns);
-        err = write_sys_attribute(input_sysfs_path, buffer, bytes);
+        short delay = ns / 1000000;
+		err = ioctl(dev_fd, ECS_IOCTL_APP_SET_DELAY, &delay);
         if (err == 0) {
             mDelay = ns;
-            LOGD("AkmSensor: set %s to %f ms.",
-                    &input_sysfs_path[input_sysfs_path_len], ns/1000000.0f);
+            LOGD("AkmSensor: set delay to %f ms.", ns/1000000.0f);
         }
     }
 
@@ -290,7 +283,7 @@ int AkmSensor::readSample(long *data, int64_t *timestamp)
             *timestamp = timevalToNano(event->time);
             memcpy(data, mCachedCompassData, sizeof(mCachedCompassData));
             done = 1;
-        } else {
+       } else {
             LOGE("HAL:Compass Sensor: unknown event (type=%d, code=%d)", type, event->code);
             LOGE("AkmSensor: unknown event (type=%d, code=%d)", type, event->code);
         }
