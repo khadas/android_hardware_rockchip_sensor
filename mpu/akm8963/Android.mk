@@ -1,3 +1,4 @@
+ifeq (${TARGET_ARCH},arm64)
 ifneq ($(TARGET_SIMULATOR),true)
 
 LOCAL_PATH:= $(call my-dir)
@@ -78,4 +79,4 @@ include $(BUILD_EXECUTABLE)
 
 
 endif  # TARGET_SIMULATOR != true
-
+endif  # TARGET_ARCH := arm64 
