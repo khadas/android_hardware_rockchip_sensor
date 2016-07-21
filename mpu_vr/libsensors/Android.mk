@@ -17,6 +17,44 @@ LOCAL_PATH := $(call my-dir)
 
 #ifneq ($(TARGET_SIMULATOR),true)
 
+ifeq (${TARGET_ARCH},arm64)
+
+include $(CLEAR_VARS)
+LOCAL_MODULE_SUFFIX := .so
+LOCAL_MODULE := libmplmpu
+LOCAL_MODULE_CLASS := SHARED_LIBRARIES
+LOCAL_SRC_FILES_arm := libmplmpu.so
+LOCAL_32_BIT_ONLY := true
+include $(BUILD_PREBUILT)
+
+include $(CLEAR_VARS)
+LOCAL_MODULE_SUFFIX := .so
+LOCAL_MODULE := libmplmpu
+LOCAL_MODULE_CLASS := SHARED_LIBRARIES
+LOCAL_SRC_FILES_arm64 := libmplmpu_64.so
+include $(BUILD_PREBUILT)
+
+endif
+
+ifeq (${TARGET_ARCH},arm64)
+
+include $(CLEAR_VARS)
+LOCAL_MODULE_SUFFIX := .so
+LOCAL_MODULE := libmllite
+LOCAL_MODULE_CLASS := SHARED_LIBRARIES
+LOCAL_SRC_FILES_arm := libmllite.so
+LOCAL_32_BIT_ONLY := true
+include $(BUILD_PREBUILT)
+
+include $(CLEAR_VARS)
+LOCAL_MODULE_SUFFIX := .so
+LOCAL_MODULE := libmllite
+LOCAL_MODULE_CLASS := SHARED_LIBRARIES
+LOCAL_SRC_FILES_arm64 := libmllite_64.so
+include $(BUILD_PREBUILT)
+
+endif
+
 # InvenSense fragment of the HAL
 include $(CLEAR_VARS)
 
@@ -102,13 +140,13 @@ LOCAL_SHARED_LIBRARIES += libmllite
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/software/core/mllite
 LOCAL_CPPFLAGS += -DLINUX=1
 LOCAL_PRELINK_MODULE := false
-
 include $(BUILD_SHARED_LIBRARY)
 
 #endif # !TARGET_SIMULATOR
 
 # Build a temporary HAL that links the InvenSense .so
 include $(CLEAR_VARS)
+
 LOCAL_MODULE := sensors.rk30board
 $(info YD>>LOCAL_MODULE=$(LOCAL_MODULE))
 
@@ -177,6 +215,8 @@ LOCAL_SHARED_LIBRARIES += libmllite
 $(info YD>>LOCAL_MODULE=$(LOCAL_MODULE), LOCAL_SRC_FILES=$(LOCAL_SRC_FILES), LOCAL_SHARED_LIBRARIES=$(LOCAL_SHARED_LIBRARIES))
 include $(BUILD_SHARED_LIBRARY)
 
+ifneq (${TARGET_ARCH},arm64)
+
 include $(CLEAR_VARS)
 LOCAL_MODULE := libmplmpu
 LOCAL_SRC_FILES := libmplmpu.so
@@ -199,3 +239,37 @@ LOCAL_MODULE_PATH := $(TARGET_OUT)/lib
 OVERRIDE_BUILT_MODULE_PATH := $(TARGET_OUT_INTERMEDIATE_LIBRARIES)
 include $(BUILD_PREBUILT)
 
+endif
+
+# Build self_test bin
+ifeq (${TARGET_ARCH},arm64)
+
+include $(CLEAR_VARS)
+
+LOCAL_MODULE := self_test
+LOCAL_32_BIT_ONLY := true
+LOCAL_CFLAGS += -DLINUX
+
+LOCAL_C_INCLUDES += $(LOCAL_PATH)/software/core/mllite
+LOCAL_C_INCLUDES += $(LOCAL_PATH)/software/core/mllite/linux
+LOCAL_C_INCLUDES += $(LOCAL_PATH)/software/core/mpl
+LOCAL_C_INCLUDES += $(LOCAL_PATH)/software/core/driver/include
+LOCAL_C_INCLUDES += $(LOCAL_PATH)/software/core/driver/include/linux
+
+LOCAL_MODULE_TAGS := optional
+
+LOCAL_SRC_FILES := software/simple_apps/self_test/inv_self_test.c
+
+LOCAL_SHARED_LIBRARIES += libcutils
+LOCAL_SHARED_LIBRARIES += libutils
+LOCAL_SHARED_LIBRARIES += libdl
+LOCAL_SHARED_LIBRARIES += libc
+LOCAL_SHARED_LIBRARIES += libm
+LOCAL_SHARED_LIBRARIES += libz
+LOCAL_SHARED_LIBRARIES += libstdc++
+LOCAL_SHARED_LIBRARIES += liblog
+LOCAL_SHARED_LIBRARIES += libmplmpu
+LOCAL_SHARED_LIBRARIES += libmllite
+include $(BUILD_EXECUTABLE)
+
+endif

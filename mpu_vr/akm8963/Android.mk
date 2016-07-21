@@ -1,6 +1,8 @@
 
 LOCAL_PATH:= $(call my-dir)
 
+ifneq (${TARGET_ARCH},arm64)
+
 # libAK8963
 include $(CLEAR_VARS)
 
@@ -42,3 +44,4 @@ LOCAL_STATIC_LIBRARIES := libAK8963
 LOCAL_SHARED_LIBRARIES := libc libm libz libutils libcutils
 include $(BUILD_EXECUTABLE)
 
+endif
