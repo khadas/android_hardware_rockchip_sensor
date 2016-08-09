@@ -64,4 +64,6 @@ else ifeq ($(strip $(BOARD_SENSOR_COMPASS_AK09911)), true)
 include $(LOCAL_PATH)/akm09911/Android.mk
 else ifeq ($(strip $(BOARD_SENSOR_COMPASS_AK8975)), true)
 include $(LOCAL_PATH)/akm8975/Android.mk
+else
+include $(LOCAL_PATH)/akm8963-64/Android.mk
 endif # ifeq ($(strip $(BOARD_SENSOR_COMPASS_AK8963)), true)
