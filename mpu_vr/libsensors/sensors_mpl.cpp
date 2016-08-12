@@ -36,7 +36,7 @@
 /*****************************************************************************/
 /* The SENSORS Module */
 
-#define VERSION     "version: 11"
+#define VERSION     "version: 1.15"
 
 #define ENABLE_LIGHT_SENSOR     1
 
@@ -477,3 +477,176 @@ static int open_sensors(const struct hw_module_t* module, const char* id,
 
     return status;
 }
+
+#include <sys/stat.h>
+
+static void show_usage(const char* app)
+{
+    printf("%s -p -t [type mask]\n", app);
+}
+
+#define SENSOR_FIFO_NAME "/dev/sensor_fifo"
+
+#define SENSOR_TYPE_MASK(x)     (1<<x)
+
+// sensor_test -p -t 64
+int main(int argc, char** argv)
+{
+//    int handle = SENSORS_GYROSCOPE_HANDLE;
+//    int64_t delay_ns = 2000000;
+    sensors_event_t data[16];
+    int count=16;
+    int i;
+    sensors_poll_context_t *ctx = new sensors_poll_context_t();
+    int res;
+    int pipe_fd;
+    int pcba_test = 0;
+    uint64_t sensor_type_mask = 0;
+
+    do {
+        int c;
+
+        c = getopt(argc, argv, "hpt:");
+
+        if (c == -1) {
+            break;
+        }
+
+        switch (c) {
+        case 'p':
+            pcba_test = 1;
+            break;
+        case 't':
+            sensor_type_mask = strtoll(optarg, NULL, 0);
+            break;
+        default:
+        case 'h':
+            show_usage(argv[0]);
+            exit(EXIT_FAILURE);
+        }
+    } while (1);
+
+    for (i=ID_GY; i<ID_MAX; i++)
+        ctx->activate(i, 0);
+
+    if (pcba_test) {
+        if (access(SENSOR_FIFO_NAME, F_OK) == -1)  
+        {
+            res = mkfifo(SENSOR_FIFO_NAME, 0777);
+            if (res != 0)
+            {  
+                fprintf(stderr, "Could not create fifo %s\n", SENSOR_FIFO_NAME);
+                exit(EXIT_FAILURE);
+            }
+        }
+        pipe_fd = open(SENSOR_FIFO_NAME, O_WRONLY);
+        if (pipe_fd<=0) {
+            fprintf(stderr, "Could not open fifo %s for write\n", SENSOR_FIFO_NAME);
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    printf("sensor_type_mask=%lld\n", sensor_type_mask);
+    // enable specification sensors
+    if (sensor_type_mask&SENSOR_TYPE_MASK(SENSOR_TYPE_ACCELEROMETER)) {
+        printf("enable accel\n");
+        ctx->activate(SENSORS_ACCELERATION_HANDLE, 1);
+        ctx->setDelay(SENSORS_ACCELERATION_HANDLE, 1000000);
+    }
+    if (sensor_type_mask&SENSOR_TYPE_MASK(SENSOR_TYPE_GYROSCOPE)) {
+        printf("enable gyro\n");
+        ctx->activate(SENSORS_GYROSCOPE_HANDLE, 1);
+        ctx->setDelay(SENSORS_GYROSCOPE_HANDLE, 1000000);
+    }
+    if (sensor_type_mask&SENSOR_TYPE_MASK(SENSOR_TYPE_MAGNETIC_FIELD)) {
+        printf("enable compass\n");
+        ctx->activate(SENSORS_MAGNETIC_FIELD_HANDLE, 1);
+        ctx->setDelay(SENSORS_MAGNETIC_FIELD_HANDLE, 10000000);
+    }
+    if (sensor_type_mask&SENSOR_TYPE_MASK(SENSOR_TYPE_LIGHT)) {
+        printf("enable light\n");
+        ctx->activate(SENSORS_LIGHT_HANDLE, 1);
+        ctx->setDelay(SENSORS_LIGHT_HANDLE, 100000000);
+    }
+    if (sensor_type_mask&SENSOR_TYPE_MASK(SENSOR_TYPE_PRESSURE)) {
+        // unsupport;
+    }
+
+    sleep(1);
+
+// get sensor data
+    while(1) {
+        int nb = ctx->pollEvents(data, count);
+        for (i=0; i<nb; i++) {
+            if (pcba_test) {
+                res = write(pipe_fd, &data[i], sizeof(data[i]));
+                if (res<=0) {
+                    fprintf(stderr, "Write error on sensor pipe\n"); 
+                }
+                continue;
+            }
+            if (data[i].sensor == SENSORS_GAME_ROTATION_VECTOR_HANDLE) {
+                printf("GRV: %+f %+f %+f %+f %+f - %lld\n",
+                        data[i].data[0], data[i].data[1], data[i].data[2], data[i].data[3], data[i].data[4], data[i].timestamp);
+            }
+            else if (data[i].sensor == SENSORS_ORIENTATION_HANDLE) {
+                printf( "ORI: %f %f %f - %lld\n",
+                    data[i].orientation.v[0], data[i].orientation.v[1], data[i].orientation.v[2],
+                    data[i].timestamp);
+            }
+            else if (data[i].sensor == SENSORS_ACCELERATION_HANDLE) {
+                printf( "ACL: %+f %+f %+f -- %lld\n",
+                    data[i].acceleration.v[0], data[i].acceleration.v[1], data[i].acceleration.v[2],
+                    data[i].timestamp);
+            }
+            else if (data[i].sensor == SENSORS_MAGNETIC_FIELD_HANDLE) {
+                printf( "MAG: %+f %+f %+f -- %lld\n",
+                    data[i].magnetic.v[0], data[i].magnetic.v[1], data[i].magnetic.v[2],
+                    data[i].timestamp);
+            }
+            else if (data[i].sensor == SENSORS_GYROSCOPE_HANDLE) {
+                printf( "GYRO: %+f %+f %+f -- %lld\n",
+                    data[i].gyro.v[0], data[i].gyro.v[1], data[i].gyro.v[2],
+                    data[i].timestamp);
+            }
+            else if (data[i].sensor == SENSORS_RAW_GYROSCOPE_HANDLE) {
+                printf( "RAW GYRO: %+f %+f %+f : %+f %+f %+f -- %lld\n",
+                    data[i].uncalibrated_gyro.uncalib[0],
+                    data[i].uncalibrated_gyro.uncalib[1],
+                    data[i].uncalibrated_gyro.uncalib[2],
+                    data[i].uncalibrated_gyro.bias[0],
+                    data[i].uncalibrated_gyro.bias[1],
+                    data[i].uncalibrated_gyro.bias[2],
+                    data[i].timestamp);
+            }
+        }
+    }
+
+    if (pcba_test) {
+        close(pipe_fd);
+    }
+
+    // disable sensor & exit
+    if (sensor_type_mask&SENSOR_TYPE_MASK(SENSOR_TYPE_ACCELEROMETER)) {
+        ctx->activate(SENSORS_ACCELERATION_HANDLE, 0);
+    }
+    if (sensor_type_mask&SENSOR_TYPE_MASK(SENSOR_TYPE_GYROSCOPE)) {
+        ctx->activate(SENSORS_GYROSCOPE_HANDLE, 0);
+    }
+    if (sensor_type_mask&SENSOR_TYPE_MASK(SENSOR_TYPE_MAGNETIC_FIELD)) {
+        ctx->activate(SENSORS_MAGNETIC_FIELD_HANDLE, 0);
+    }
+    if (sensor_type_mask&SENSOR_TYPE_MASK(SENSOR_TYPE_LIGHT)) {
+        ctx->activate(SENSORS_LIGHT_HANDLE, 0);
+    }
+    if (sensor_type_mask&SENSOR_TYPE_MASK(SENSOR_TYPE_PRESSURE)) {
+        // unsupport;
+    }
+
+    delete ctx;
+
+    printf("Exit!");
+
+	return 0;
+}
+

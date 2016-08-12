@@ -145,8 +145,8 @@ int AkmSensor::setEnable(int32_t handle, int en)
         }
         int cmd;
         switch (what) {
-            case MagneticField: cmd = ECS_IOCTL_APP_SET_MFLAG; break;
-            case Orientation:   cmd = ECS_IOCTL_APP_SET_MVFLAG;  break;
+            case MagneticField: cmd = ECS_IOCTL_APP_SET_MVFLAG; break;
+            case Orientation:   cmd = ECS_IOCTL_APP_SET_MFLAG;  break;
         }
         short flags = newState;
         err = ioctl(dev_fd, cmd, &flags);
@@ -293,15 +293,15 @@ void AkmSensor::processEvent(int code, int value)
 //	D("Entered : code = 0x%x, value = 0x%x.", code, value);
 
     switch (code) {
-        case EVENT_TYPE_MAGV_X:
+        case ABS_HAT0X:
             mPendingMask |= 1<<MagneticField;
             mPendingEvents[MagneticField].magnetic.x = value;// * CONVERT_M_X; 0
             break;
-        case EVENT_TYPE_MAGV_Y:
+        case ABS_HAT0Y:
             mPendingMask |= 1<<MagneticField;
             mPendingEvents[MagneticField].magnetic.y = value;// * CONVERT_M_Y; 0
             break;
-        case EVENT_TYPE_MAGV_Z:
+        case ABS_BRAKE:
             mPendingMask |= 1<<MagneticField;
             mPendingEvents[MagneticField].magnetic.z = value;// * CONVERT_M_Z; 0
             break;

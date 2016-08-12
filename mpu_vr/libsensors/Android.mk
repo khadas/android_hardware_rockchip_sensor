@@ -215,6 +215,22 @@ LOCAL_SHARED_LIBRARIES += libmllite
 $(info YD>>LOCAL_MODULE=$(LOCAL_MODULE), LOCAL_SRC_FILES=$(LOCAL_SRC_FILES), LOCAL_SHARED_LIBRARIES=$(LOCAL_SHARED_LIBRARIES))
 include $(BUILD_SHARED_LIBRARY)
 
+#
+# Build sensor_test
+sensor_src_files := $(LOCAL_SRC_FILES)
+sensor_shared_lib := $(LOCAL_SHARED_LIBRARIES)
+sensor_cflags := $(LOCAL_CFLAGS)
+sensor_c_include := $(LOCAL_C_INCLUDES)
+include $(CLEAR_VARS)
+LOCAL_MODULE := sensor_test
+LOCAL_SRC_FILES := $(sensor_src_files)
+LOCAL_SHARED_LIBRARIES := $(sensor_shared_lib)
+LOCAL_CFLAGS := $(sensor_cflags)
+LOCAL_C_INCLUDES := $(sensor_c_include)
+LOCAL_PRELINK_MODULE := false
+LOCAL_MODULE_TAGS := optional
+include $(BUILD_EXECUTABLE)
+
 ifneq (${TARGET_ARCH},arm64)
 
 include $(CLEAR_VARS)

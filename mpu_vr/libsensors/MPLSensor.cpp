@@ -1577,12 +1577,6 @@ int MPLSensor::accelHandler(sensors_event_t* s)
 {
     VHANDLER_LOG;
     int update;
-/*
-    long bias[3];
-    inv_get_accel_bias(bias, NULL);
-    if (bias[0] || bias[1] || bias[2])
-        LOGV("HAL:accel bias : %ld %ld %ld", bias[0], bias[1], bias[2]);
-*/
 
 #if defined ANDROID_LOLLIPOP
     update = inv_get_sensor_type_accelerometer(
