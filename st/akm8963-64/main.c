@@ -212,15 +212,15 @@ void Disp_MeasurementResultHook(AKSCPRMS* prms, const uint16 flag)
 	rbuf[3] = prms->m_avec.u.z;	/* Az */
 	rbuf[4] = 3;					/* Acc status */
 
-	rbuf[5] = prms->m_theta;		/* yaw	(deprecate) x*/
-	rbuf[6] = prms->m_phi180;	/* pitch (deprecate) y*/
-	rbuf[7] = prms->m_eta90;		/* roll  (deprecate) z*/
-	rbuf[8] = 3;					/* Acc status */
+	rbuf[5] = prms->m_hvec.u.x;	/* Mx */
+	rbuf[6] = prms->m_hvec.u.y;	/* My */
+	rbuf[7] = prms->m_hvec.u.z;	/* Mz */
+	rbuf[8] = totalHDST;		/* Mag status */
 
-	rbuf[9] = prms->m_hvec.u.x;	/* Mx */
-	rbuf[10] = prms->m_hvec.u.y;	/* My */
-	rbuf[11] = prms->m_hvec.u.z;	/* Mz */
-	rbuf[12] = totalHDST;		/* Mag status */
+	rbuf[9] = prms->m_theta;	/* yaw  (deprecate) x*/
+	rbuf[10] = prms->m_phi180;	/* pitch (deprecate) y*/
+	rbuf[11] = prms->m_eta90;	/* roll  (deprecate) z*/
+	rbuf[12] = 3;
 
 		AKD_SetYPR(rbuf);
 	} else {
