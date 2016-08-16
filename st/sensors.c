@@ -31,7 +31,7 @@
  */
 
 static const struct sensor_t sSensorList[] = {
-
+        #ifdef GRAVITY_SENSOR_SUPPORT
         { .name       = "Gravity sensor",
           .vendor     = "The Android Open Source Project",
           .version    = 1,
@@ -40,11 +40,12 @@ static const struct sensor_t sSensorList[] = {
           .maxRange   = 4.0f*9.81f,
           .resolution = (4.0f*9.81f)/256.0f,
           .power      = 0.2f,
-          .minDelay   = 5000,
+          .minDelay   = 10000,
           .reserved   = {}
         },
-
-	{ .name       = "Compass Magnetic field sensor",
+        #endif
+        #ifdef COMPASS_SENSOR_SUPPORT
+        { .name       = "Compass Magnetic field sensor",
           .vendor     = "The Android Open Source Project",
           .version    = 1,
           .handle     = SENSORS_HANDLE_BASE+ID_M,
@@ -52,11 +53,11 @@ static const struct sensor_t sSensorList[] = {
           .maxRange   = 2000.0f,
           .resolution = 1.0f/16.0f,
           .power      = 6.8f,
-          .minDelay   = 5000,
+          .minDelay   = 10000,
           .reserved   = {}
         },
 
-	{ .name       = "Compass Orientation sensor",
+        { .name       = "Compass Orientation sensor",
           .vendor     = "The Android Open Source Project",
           .version    = 1,
           .handle     = SENSORS_HANDLE_BASE+ID_O,
@@ -64,11 +65,12 @@ static const struct sensor_t sSensorList[] = {
           .maxRange   = 360.0f,
           .resolution = 1.0f,
           .power      = 7.0f,
-          .minDelay   = 5000,
+          .minDelay   = 10000,
           .reserved   = {}
         },
-
-	{ .name       = "Gyroscope sensor",
+        #endif
+        #ifdef GYROSCOPE_SENSOR_SUPPORT
+        { .name       = "Gyroscope sensor",
           .vendor     = "The Android Open Source Project",
           .version    = 1,
           .handle     = SENSORS_HANDLE_BASE+ID_GY,
@@ -76,11 +78,12 @@ static const struct sensor_t sSensorList[] = {
           .maxRange   = RANGE_GYRO,
           .resolution = CONVERT_GYRO,
           .power      = 6.1f,
-          .minDelay   = 5000,
+          .minDelay   = 10000,
           .reserved   = {}
         },
-
-	{ .name       = "Proximity sensor",
+        #endif
+        #ifdef PROXIMITY_SENSOR_SUPPORT
+        { .name       = "Proximity sensor",
           .vendor     = "The Android Open Source Project",
           .version    = 1,
           .handle     = SENSORS_HANDLE_BASE+ID_P,
@@ -88,12 +91,12 @@ static const struct sensor_t sSensorList[] = {
           .maxRange   = PROXIMITY_THRESHOLD_CM,
           .resolution = PROXIMITY_THRESHOLD_CM,
           .power      = 0.5f,
-          .minDelay   = 5000,
+          .minDelay   = 10000,
           .reserved   = {}
         },
-
-
-	{ .name       = "Light sensor",
+        #endif
+        #ifdef LIGHT_SENSOR_SUPPORT
+        { .name       = "Light sensor",
           .vendor     = "The Android Open Source Project",
           .version    = 1,
           .handle     = SENSORS_HANDLE_BASE+ID_L,
@@ -101,11 +104,12 @@ static const struct sensor_t sSensorList[] = {
           .maxRange   = 10240.0f,
           .resolution = 1.0f,
           .power      = 0.5f,
-          .minDelay   = 5000,
+          .minDelay   = 10000,
           .reserved   = {}
         },
-
-	{ .name       = "Pressure sensor",
+        #endif
+        #ifdef PRESSURE_SENSOR_SUPPORT
+        { .name       = "Pressure sensor",
           .vendor     = "The Android Open Source Project",
           .version    = 1,
           .handle     = SENSORS_HANDLE_BASE+ID_PR,
@@ -113,12 +117,12 @@ static const struct sensor_t sSensorList[] = {
           .maxRange   = 110000.0f,
           .resolution = 1.0f,
           .power      = 1.0f,
-          .minDelay   = 5000,
+          .minDelay   = 10000,
           .reserved   = {}
         },
-
-
-	{ .name       = "Temperature sensor",
+        #endif
+        #ifdef TEMPERATURE_SENSOR_SUPPORT
+        { .name       = "Temperature sensor",
           .vendor     = "The Android Open Source Project",
           .version    = 1,
           .handle     = SENSORS_HANDLE_BASE+ID_TMP,
@@ -126,10 +130,10 @@ static const struct sensor_t sSensorList[] = {
           .maxRange   = 110000.0f,
           .resolution = 1.0f,
           .power      = 1.0f,
-          .minDelay   = 5000,
+          .minDelay   = 10000,
           .reserved   = {}
         },
-		
+        #endif
 };
 
 static int open_sensors(const struct hw_module_t* module, const char* name,
