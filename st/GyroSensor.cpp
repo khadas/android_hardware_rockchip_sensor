@@ -213,9 +213,8 @@ again:
 	    //LOGD("mPendingEvent: %f, %f, %f", mPendingEvent.gyro.x, mPendingEvent.gyro.y, mPendingEvent.gyro.z);
         }else if (type == EV_SYN) {
            
-            time = timevalToNano(event->time);
             if(mEnabled) {
-                mPendingEvent.timestamp = time;
+                mPendingEvent.timestamp = getTimestamp();
 
                 *data++ = mPendingEvent;
                 count--;

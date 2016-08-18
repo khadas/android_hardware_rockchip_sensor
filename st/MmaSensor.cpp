@@ -499,7 +499,6 @@ int MmaSensor::readEvents(sensors_event_t* data, int count)
             processEvent(event->code, event->value);
             mInputReader.next();
         } else if (type == EV_SYN) {    // #define EV_SYN 0x00
-            int64_t time = timevalToNano(event->time);
             for (int j=0 ; count && mPendingMask && j<numSensors ; j++) {
                 D("mPendingMask = 0x%x, j = %d; (mPendingMask & (1<<j)) = 0x%x", mPendingMask, j, (mPendingMask & (1<<j)) );
                 if (mPendingMask & (1<<j)) {
