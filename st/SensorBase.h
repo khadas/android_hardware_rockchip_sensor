@@ -16,12 +16,16 @@
 
 #ifndef ANDROID_SENSOR_BASE_H
 #define ANDROID_SENSOR_BASE_H
+#define INSERT_FAKE_MAX 5
+#define INSERT_DUR_MAX 8
+#define INSERT_DUR_MIN 5
 
 #include <stdint.h>
 #include <errno.h>
 #include <string.h>
 #include <sys/cdefs.h>
 #include <sys/types.h>
+#include <utils/Timers.h>
 
 
 /*****************************************************************************/

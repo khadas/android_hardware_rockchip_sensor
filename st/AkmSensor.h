@@ -51,6 +51,7 @@ public:
     virtual int enable(int32_t handle, int enabled);
     virtual int readEvents(sensors_event_t* data, int count);
     void processEvent(int code, int value);
+    void instertFakeData(int num) ;
 
 private:
     int update_delay();
@@ -58,6 +59,8 @@ private:
     uint32_t mPendingMask;
     InputEventCircularReader mInputReader;
     sensors_event_t mPendingEvents[numSensors];
+    sensors_event_t mMagnInsertingEvents[INSERT_FAKE_MAX];
+    int64_t mPretimestamp;
     uint64_t mDelays[numSensors];
 };
 

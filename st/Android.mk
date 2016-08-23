@@ -12,6 +12,10 @@ LOCAL_CFLAGS += \
 LOCAL_CPPFLAGS += \
 	-Wno-unused-parameter
 
+ifeq ($(BUILD_WITH_GMS_CER), true)
+LOCAL_CFLAGS += -DINSERT_FAKE_DATA
+endif
+
 ifeq ($(BOARD_GRAVITY_SENSOR_SUPPORT), true)
 LOCAL_CFLAGS += -DGRAVITY_SENSOR_SUPPORT
 endif

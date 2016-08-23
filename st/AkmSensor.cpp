@@ -36,6 +36,8 @@ AkmSensor::AkmSensor()
       mInputReader(32)
 {
     memset(mPendingEvents, 0, sizeof(mPendingEvents));
+    memset(mMagnInsertingEvents, 0, sizeof(mMagnInsertingEvents));
+    mPretimestamp = 0;
 /*
     mPendingEvents[Accelerometer].version = sizeof(sensors_event_t);
     mPendingEvents[Accelerometer].sensor = ID_A;
@@ -236,9 +238,25 @@ int AkmSensor::readEvents(sensors_event_t* data, int count)
                     mPendingEvents[j].timestamp = getTimestamp();
                     D( "mEnabled = 0x%x, j = %d; mEnabled & (1<<j) = 0x%x.", mEnabled, j, (mEnabled & (1 << j) ) );
                     if (mEnabled & (1<<j)) {
+                        D("hxw mPendingEvents[j].timestamp:%ld\n",mPendingEvents[j].timestamp);
+                        D("hxw mPretimestamp:%ld\n",mPretimestamp);
+#ifdef INSERT_FAKE_DATA
+                        if(mPretimestamp == 0)mPretimestamp = mPendingEvents[j].timestamp;
+                        int tmstamp_ms =  nanoseconds_to_milliseconds(mPendingEvents[j].timestamp - mPretimestamp);
+                        int num = tmstamp_ms/INSERT_DUR_MAX;
+                        num -= tmstamp_ms%INSERT_DUR_MAX<INSERT_DUR_MIN? 1: 0;
+                        num = num>=INSERT_FAKE_MAX ? 0 : num;
+                        instertFakeData(num);
+                        for(int k = 0;k<num;k++){
+	                     *data++ = mMagnInsertingEvents[k];
+	                     count--;
+	                     numEventReceived++;
+                        }
+#endif
                         *data++ = mPendingEvents[j];
                         count--;
                         numEventReceived++;
+                        mPretimestamp = mPendingEvents[j].timestamp;
                     }
                 }
             }
@@ -254,6 +272,23 @@ int AkmSensor::readEvents(sensors_event_t* data, int count)
 
     return numEventReceived;
 }
+
+void AkmSensor::instertFakeData(int num){
+    for (int i=num-1; i>=0; i--){
+	    mMagnInsertingEvents[i].version = mPendingEvents[MagneticField].version;
+	    mMagnInsertingEvents[i].sensor = mPendingEvents[MagneticField].sensor;
+	    mMagnInsertingEvents[i].type = mPendingEvents[MagneticField].type;
+	    mMagnInsertingEvents[i].magnetic.status = mPendingEvents[MagneticField].magnetic.status;
+           mMagnInsertingEvents[i].magnetic.x = mPendingEvents[MagneticField].magnetic.x;
+           mMagnInsertingEvents[i].magnetic.y= mPendingEvents[MagneticField].magnetic.y;
+           mMagnInsertingEvents[i].magnetic.z= mPendingEvents[MagneticField].magnetic.z;
+           //usleep(5000);
+           //mMagnInsertingEvents[i].timestamp = getTimestamp();
+           mMagnInsertingEvents[i].timestamp = mPendingEvents[MagneticField].timestamp - INSERT_DUR_MAX*1000000*(num-i);
+           D("hxw mMagnInsertingEvents[%d].timestamp:%ld\n",i,mMagnInsertingEvents[i].timestamp);
+    }
+}
+
 
 void AkmSensor::processEvent(int code, int value)
 {

@@ -41,6 +41,8 @@ GyroSensor::GyroSensor()
       mEnabled(0),
       mInputReader(32)
 {
+    memset(mGyroInsertingEvents, 0, sizeof(mGyroInsertingEvents));
+    mPretimestamp = 0;
     mPendingEvent.version = sizeof(sensors_event_t);
     mPendingEvent.sensor = ID_GY;
     mPendingEvent.type = SENSOR_TYPE_GYROSCOPE;
@@ -215,10 +217,25 @@ again:
            
             if(mEnabled) {
                 mPendingEvent.timestamp = getTimestamp();
-
+                D("hxw mPendingEvents[j].timestamp:%ld\n",mPendingEvent.timestamp);
+                D("hxw mPretimestamp:%ld\n",mPretimestamp);
+#ifdef INSERT_FAKE_DATA
+                if(mPretimestamp == 0)mPretimestamp = mPendingEvent.timestamp;
+                int tmstamp_ms =  nanoseconds_to_milliseconds(mPendingEvent.timestamp - mPretimestamp);
+                int num = tmstamp_ms/INSERT_DUR_MAX;
+                num -= tmstamp_ms%INSERT_DUR_MAX<INSERT_DUR_MIN? 1: 0;
+                num = num>=INSERT_FAKE_MAX ? 0 : num;
+                instertFakeData(num);
+                for(int k = 0;k<num;k++){
+                    *data++ = mGyroInsertingEvents[k];
+                     count--;
+                     numEventReceived++;
+                }
+#endif
                 *data++ = mPendingEvent;
                 count--;
                 numEventReceived++;
+                mPretimestamp = mPendingEvent.timestamp;
             }
 
         }else {
@@ -238,5 +255,21 @@ again:
 #endif
 
     return numEventReceived;
+}
+
+void GyroSensor::instertFakeData(int num){
+    for (int i=num-1 ; i>=0; i--){
+	    mGyroInsertingEvents[i].version = mPendingEvent.version;
+	    mGyroInsertingEvents[i].sensor = mPendingEvent.sensor;
+	    mGyroInsertingEvents[i].type = mPendingEvent.type;
+	    mGyroInsertingEvents[i].gyro.status = mPendingEvent.gyro.status;
+           mGyroInsertingEvents[i].gyro.x = mPendingEvent.gyro.x;
+           mGyroInsertingEvents[i].gyro.y= mPendingEvent.gyro.y;
+           mGyroInsertingEvents[i].gyro.z= mPendingEvent.gyro.z;
+           //usleep(10);
+           //mGyroInsertingEvents[i].timestamp = getTimestamp();
+           mGyroInsertingEvents[i].timestamp = mPendingEvent.timestamp - INSERT_DUR_MAX*1000000*(num-i);
+           D("hxw mGyroInsertingEvents[%d].timestamp:%ld\n",i,mGyroInsertingEvents[i].timestamp);
+    }
 }
 

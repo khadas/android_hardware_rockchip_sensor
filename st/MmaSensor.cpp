@@ -322,6 +322,8 @@ MmaSensor::MmaSensor()
       mInputReader(32)
 {
     memset(mPendingEvents, 0, sizeof(mPendingEvents));
+    memset(mAccelInsertingEvents, 0, sizeof(mAccelInsertingEvents));
+    mPretimestamp = 0;
 
     mPendingEvents[Accelerometer].version = sizeof(sensors_event_t);
     mPendingEvents[Accelerometer].sensor = ID_A;
@@ -503,12 +505,28 @@ int MmaSensor::readEvents(sensors_event_t* data, int count)
                 D("mPendingMask = 0x%x, j = %d; (mPendingMask & (1<<j)) = 0x%x", mPendingMask, j, (mPendingMask & (1<<j)) );
                 if (mPendingMask & (1<<j)) {
                     mPendingMask &= ~(1<<j);
-                    mPendingEvents[j].timestamp = getTimestamp();
                     D( "mEnabled = 0x%x, j = %d; mEnabled & (1<<j) = 0x%x.", mEnabled, j, (mEnabled & (1 << j) ) );
                     if (mEnabled & (1<<j)) {
+                        mPendingEvents[j].timestamp = getTimestamp();
+                        D("hxw mPendingEvents[j].timestamp:%ld\n",mPendingEvents[j].timestamp);
+                        D("hxw mPretimestamp:%ld\n",mPretimestamp);
+#ifdef INSERT_FAKE_DATA
+                        if(mPretimestamp == 0)mPretimestamp = mPendingEvents[j].timestamp;
+                        int tmstamp_ms =  nanoseconds_to_milliseconds(mPendingEvents[j].timestamp - mPretimestamp);
+                        int num = tmstamp_ms/INSERT_DUR_MAX;
+                        num -= tmstamp_ms%INSERT_DUR_MAX<INSERT_DUR_MIN? 1: 0;
+                        num = num>=INSERT_FAKE_MAX ? 0 : num;
+                        instertFakeData(num);
+                        for(int k = 0;k<num;k++){
+	                     *data++ = mAccelInsertingEvents[k];
+	                     count--;
+	                     numEventReceived++;
+                        }
+#endif
                         *data++ = mPendingEvents[j];
                         count--;
                         numEventReceived++;
+                        mPretimestamp = mPendingEvents[j].timestamp;
                     }
                 }
             }
@@ -532,6 +550,22 @@ int MmaSensor::readEvents(sensors_event_t* data, int count)
     }
 
     return numEventReceived;
+}
+
+void MmaSensor::instertFakeData(int num){
+    for (int i=num-1 ; i>=0; i--){
+	    mAccelInsertingEvents[i].version = mPendingEvents[Accelerometer].version;
+	    mAccelInsertingEvents[i].sensor = mPendingEvents[Accelerometer].sensor;
+	    mAccelInsertingEvents[i].type = mPendingEvents[Accelerometer].type;
+	    mAccelInsertingEvents[i].acceleration.status = mPendingEvents[Accelerometer].acceleration.status;
+           mAccelInsertingEvents[i].acceleration.x = mPendingEvents[Accelerometer].acceleration.x;
+           mAccelInsertingEvents[i].acceleration.y= mPendingEvents[Accelerometer].acceleration.y;
+           mAccelInsertingEvents[i].acceleration.z= mPendingEvents[Accelerometer].acceleration.z;
+           //usleep(10);
+           //mAccelInsertingEvents[i].timestamp = getTimestamp();
+           mAccelInsertingEvents[i].timestamp = mPendingEvents[Accelerometer].timestamp - INSERT_DUR_MAX*1000000*(num-i);
+           D("hxw mAccelInsertingEvents[%d].timestamp:%ld\n",i,mAccelInsertingEvents[i].timestamp);
+    }
 }
 
 void MmaSensor::processEvent(int code, int value)
