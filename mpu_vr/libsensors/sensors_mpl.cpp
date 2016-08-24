@@ -36,7 +36,7 @@
 /*****************************************************************************/
 /* The SENSORS Module */
 
-#define VERSION     "version: 1.15"
+#define VERSION     "version: 1.16"
 
 #define ENABLE_LIGHT_SENSOR     1
 
@@ -245,6 +245,9 @@ static int64_t sensor_prev_time[32];
     8 - 1000 - raw gyro data with uncalib and bias
  */
 static int debug_lvl = 0;
+
+/* print sensor data latency */
+static int debug_time = 0;
 #include <cutils/properties.h>
 
 int sensors_poll_context_t::pollEvents(sensors_event_t *data, int count)
@@ -340,23 +343,24 @@ int sensors_poll_context_t::pollEvents(sensors_event_t *data, int count)
         }
 
         if (nb > 0) {
-            int64_t tm_cur = get_time_ns();
-            int64_t tm_delta = tm_cur - data->timestamp;
-            if (tm_min==0 && tm_max==0)
-                tm_min = tm_max = tm_delta;
-            else if (tm_delta < tm_min)
-                tm_min = tm_delta;
-            else if (tm_delta > tm_max)
-                tm_max = tm_delta;
-            tm_sum += tm_delta;
-            tm_count++;
-            
-            if ((tm_cur-tm_last_print) > 1000000000) {
-                LOGD_IF(0, "poll end: [%lld] %lld,%lld,%lld\n", data->timestamp, tm_min, (tm_sum/tm_count), tm_max);
-                tm_last_print = tm_cur;
-                tm_min = tm_max = tm_count = tm_sum = 0;
+            if (debug_time) {
+                int64_t tm_cur = get_time_ns();
+                int64_t tm_delta = tm_cur - data->timestamp;
+                if (tm_min==0 && tm_max==0)
+                    tm_min = tm_max = tm_delta;
+                else if (tm_delta < tm_min)
+                    tm_min = tm_delta;
+                else if (tm_delta > tm_max)
+                    tm_max = tm_delta;
+                tm_sum += tm_delta;
+                tm_count++;
+                
+                if ((tm_cur-tm_last_print) > 1000000000) {
+                    LOGD("MPU HAL report rate[%4lld]: %8lld, %8lld, %8lld\n", tm_count, tm_min, (tm_sum/tm_count), tm_max);
+                    tm_last_print = tm_cur;
+                    tm_min = tm_max = tm_count = tm_sum = 0;
+                }
             }
-
             count -= nb;
             nbEvents += nb;
             data += nb;
@@ -450,6 +454,8 @@ static int open_sensors(const struct hw_module_t* module, const char* id,
     LOGD("Sensor HAL %s", VERSION);
 
     int status = -EINVAL;
+    char propbuf[PROPERTY_VALUE_MAX];
+
     sensors_poll_context_t *dev = new sensors_poll_context_t();
 
     memset(&dev->device, 0, sizeof(sensors_poll_device_1));
@@ -474,6 +480,9 @@ static int open_sensors(const struct hw_module_t* module, const char* id,
     memset(sensor_delay, 0, 32*sizeof(int));
     memset(sensor_prev_time, 0, 32*sizeof(int64_t));
 #endif
+
+    property_get("sensor.debug.time", propbuf, "0");
+    debug_time = atoi(propbuf);
 
     return status;
 }
