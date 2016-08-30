@@ -256,14 +256,10 @@ int sensors_poll_context_t::pollEvents(sensors_event_t *data, int count)
 
     int nbEvents = 0;
     int nb, polltime = -1;
-    char propbuf[PROPERTY_VALUE_MAX];
     int i=0;
 
     // look for new events
     nb = poll(mPollFds, numSensorDrivers, polltime);
-
-    property_get("sensor.debug.level", propbuf, "0");
-    debug_lvl = atoi(propbuf);
 
     if (nb > 0) {
         for (int i = 0; count && i < numSensorDrivers; i++) {
@@ -397,6 +393,10 @@ static int poll__activate(struct sensors_poll_device_t *dev,
 #if SENSOR_KEEP_ALIVE
     sensor_activate[handle] = enabled?10:0;
 #endif
+
+    char propbuf[PROPERTY_VALUE_MAX];
+    property_get("sensor.debug.level", propbuf, "0");
+    debug_lvl = atoi(propbuf);
 
     return ctx->activate(handle, enabled);
 }
