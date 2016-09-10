@@ -20,6 +20,7 @@
 #include <poll.h>
 #include <unistd.h>
 #include <dirent.h>
+#include <math.h>
 #include <sys/select.h>
 #include <cutils/log.h>
 #include <utils/BitSet.h>
@@ -208,6 +209,12 @@ again:
             mPendingEvent.data[0] = (gyrox-offx) * CONVERT_GYRO_X;
             mPendingEvent.data[1] = (gyroy-offy) * CONVERT_GYRO_Y;
             mPendingEvent.data[2] = (gyroz-offz) * CONVERT_GYRO_Z;
+
+#ifdef INSERT_FAKE_DATA
+            mPendingEvent.data[0] = fabs(mPendingEvent.data[0]-mGyroInsertingEvents[0].data[0])>5 ? mGyroInsertingEvents[0].data[0] : mPendingEvent.data[0];
+            mPendingEvent.data[1] = fabs(mPendingEvent.data[1]-mGyroInsertingEvents[0].data[1])>5 ? mGyroInsertingEvents[0].data[1] : mPendingEvent.data[1];
+            mPendingEvent.data[2] = fabs(mPendingEvent.data[2]-mGyroInsertingEvents[0].data[2])>5 ? mGyroInsertingEvents[0].data[2] : mPendingEvent.data[2];
+#endif
 
 	    mPendingEvent.gyro.x =  mPendingEvent.data[0];
             mPendingEvent.gyro.y =  mPendingEvent.data[1];
