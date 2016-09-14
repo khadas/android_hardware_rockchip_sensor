@@ -122,7 +122,7 @@ int LightSensor::readEvents(sensors_event_t* data, int count)
                 }
             }
         } else if (type == EV_SYN) {
-            mPendingEvent.timestamp = timevalToNano(event->time);
+            mPendingEvent.timestamp = getTimestamp();
             if (mEnabled) {
                 *data++ = mPendingEvent;
                 count--;
