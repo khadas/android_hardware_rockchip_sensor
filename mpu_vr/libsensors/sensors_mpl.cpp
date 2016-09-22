@@ -32,11 +32,12 @@
 
 #include "sensors.h"
 #include "MPLSensor.h"
+#include "hal_outputs.h"
 
 /*****************************************************************************/
 /* The SENSORS Module */
 
-#define VERSION     "version: 1.16"
+#define VERSION     "version: 1.17"
 
 #define ENABLE_LIGHT_SENSOR     1
 
@@ -312,6 +313,18 @@ int sensors_poll_context_t::pollEvents(sensors_event_t *data, int count)
             }
         }
 #endif
+
+        int gyro_i = -1;
+        int accel_i = -1;
+        for (i=0; i<nb; i++) {
+            if (data[i].sensor==SENSORS_GYROSCOPE_HANDLE)
+                gyro_i = i;
+            if (data[i].sensor==SENSORS_ACCELERATION_HANDLE)
+                accel_i = i;
+        }
+        if (gyro_i>=0 && accel_i>=0) {
+			rkvr_add_sensor_data2(data[accel_i].acceleration.v, data[gyro_i].gyro.v, data[gyro_i].timestamp);
+        }
 
         if (debug_lvl > 0) {
             for (i=0; i<nb; i++) {
