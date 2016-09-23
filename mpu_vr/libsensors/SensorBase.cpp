@@ -150,6 +150,34 @@ int64_t SensorBase::getTimestamp()
     return int64_t(t.tv_sec) * 1000000000LL + t.tv_nsec;
 }
 
+/*
+ * 1: is target
+ * 0: is not target
+ * other: error
+ */
+static int is_target_dev(const char* fname, const char *inputName)
+{
+    int ret = 0;
+    int fd = -1;
+    char devname[PATH_MAX];
+    char name[80];
+
+    sprintf(devname, "/sys/class/input/%s/device/name", fname);
+    fd = open(devname, O_RDONLY);
+
+    if (fd >= 0) {
+        if (read(fd, name, 79) < 1)
+            name[0] = '\0';
+
+        if (!strncmp(name, inputName, strlen(inputName)))
+            ret = 1;
+
+        close(fd);
+    }
+
+    return ret;
+}
+
 int SensorBase::openInput(const char *inputName)
 {
     int fd = -1;
@@ -169,27 +197,20 @@ int SensorBase::openInput(const char *inputName)
                 (de->d_name[1] == '\0' ||
                         (de->d_name[1] == '.' && de->d_name[2] == '\0')))
             continue;
+        if (!is_target_dev(de->d_name, inputName))
+            continue;
         strcpy(filename, de->d_name);
         fd = open(devname, O_RDONLY);
         LOGV_IF(EXTRA_VERBOSE, "path open %s", devname);
         LOGI("path open %s", devname);
         if (fd >= 0) {
-            char name[80];
-            if (ioctl(fd, EVIOCGNAME(sizeof(name) - 1), &name) < 1) {
-                name[0] = '\0';
-            }
-            LOGV_IF(EXTRA_VERBOSE, "name read %s", name);
-            if (!strcmp(name, inputName)) {
-                strcpy(input_name, filename);
-                break;
-            } else {
-                close(fd);
-                fd = -1;
-            }
+            strcpy(input_name, filename);
+            break;
         }
     }
     closedir(dir);
     LOGE_IF(fd < 0, "couldn't find '%s' input device", inputName);
+
     return fd;
 }
 
