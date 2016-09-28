@@ -37,19 +37,22 @@
 /*****************************************************************************/
 /* The SENSORS Module */
 
-#define VERSION     "version: 1.17"
+#define VERSION     "version: 1.18"
 
 #define ENABLE_LIGHT_SENSOR     1
+#define ENABLE_PROXIMITY_SENSOR     1
 
 #include "LightSensor.h"
+#include "ProximitySensor.h"
 
 #ifdef ENABLE_DMP_SCREEN_AUTO_ROTATION
-#define LOCAL_SENSORS (MPLSensor::NumSensors + ENABLE_LIGHT_SENSOR + 1)
+#define LOCAL_SENSORS (MPLSensor::NumSensors + ENABLE_LIGHT_SENSOR + ENABLE_PROXIMITY_SENSOR + 1)
 #else
-#define LOCAL_SENSORS (MPLSensor::NumSensors + ENABLE_LIGHT_SENSOR)
+#define LOCAL_SENSORS (MPLSensor::NumSensors + ENABLE_LIGHT_SENSOR + ENABLE_PROXIMITY_SENSOR)
 #endif
 
 #define SENSORS_LIGHT_HANDLE            (ID_L)
+#define SENSORS_PROXIMITY_HANDLE        (ID_P)
 
 /* Vendor-defined Accel Load Calibration File Method 
 * @param[out] Accel bias, length 3.  In HW units scaled by 2^16 in body frame
@@ -109,6 +112,7 @@ private:
         dmpOrient,
         dmpSign,
         light,
+        proximity,
         numSensorDrivers,   // wake pipe goes here
         numFds,
     };
@@ -117,6 +121,7 @@ private:
     SensorBase *mSensor;
     CompassSensor *mCompassSensor;
     LightSensor *mLightSensor;
+	ProximitySensor *mProximitySensor;
 };
 
 /******************************************************************************/
@@ -126,6 +131,7 @@ sensors_poll_context_t::sensors_poll_context_t() {
 
     mCompassSensor = new CompassSensor();
     mLightSensor = new LightSensor();
+	mProximitySensor = new ProximitySensor();
     MPLSensor *mplSensor = new MPLSensor(mCompassSensor);
 
    /* For Vendor-defined Accel Calibration File Load
@@ -141,18 +147,28 @@ sensors_poll_context_t::sensors_poll_context_t() {
     sensors =
             mplSensor->populateSensorList(sSensorList, sizeof(sSensorList));
 
-    memset(&sSensorList[LOCAL_SENSORS-1], 0, sizeof(sSensorList[0]));
-	sSensorList[LOCAL_SENSORS-1].name       = "Light sensor";
-	sSensorList[LOCAL_SENSORS-1].vendor     = "Invensense";
-	sSensorList[LOCAL_SENSORS-1].version    = 1;
-	sSensorList[LOCAL_SENSORS-1].handle     = SENSORS_LIGHT_HANDLE;
-	sSensorList[LOCAL_SENSORS-1].type       = SENSOR_TYPE_LIGHT;
-	sSensorList[LOCAL_SENSORS-1].maxRange   = 10240.0f;
-	sSensorList[LOCAL_SENSORS-1].resolution = 1.0f;
-	sSensorList[LOCAL_SENSORS-1].power      = 0.5f;
-	sSensorList[LOCAL_SENSORS-1].minDelay   = 20000;
-//    sSensorList[LOCAL_SENSORS-1] = {"Light sensor", "Invensense", 1, SENSORS_LIGHT_HANDLE, SENSOR_TYPE_LIGHT, 10240.0f, 1.0f, 0.5f, 20000, {}};
+    memset(&sSensorList[LOCAL_SENSORS-2], 0, sizeof(sSensorList[0]));
+	sSensorList[LOCAL_SENSORS-2].name       = "Light sensor";
+	sSensorList[LOCAL_SENSORS-2].vendor     = "Invensense";
+	sSensorList[LOCAL_SENSORS-2].version    = 1;
+	sSensorList[LOCAL_SENSORS-2].handle     = SENSORS_LIGHT_HANDLE;
+	sSensorList[LOCAL_SENSORS-2].type       = SENSOR_TYPE_LIGHT;
+	sSensorList[LOCAL_SENSORS-2].maxRange   = 10240.0f;
+	sSensorList[LOCAL_SENSORS-2].resolution = 1.0f;
+	sSensorList[LOCAL_SENSORS-2].power      = 0.5f;
+	sSensorList[LOCAL_SENSORS-2].minDelay   = 20000;
     sensors += 1;
+
+	memset(&sSensorList[LOCAL_SENSORS-1], 0, sizeof(sSensorList[0]));
+	sSensorList[LOCAL_SENSORS-1].name		= "Proximity sensor";
+	sSensorList[LOCAL_SENSORS-1].vendor 	= "Invensense";
+	sSensorList[LOCAL_SENSORS-1].version	= 1;
+	sSensorList[LOCAL_SENSORS-1].handle 	= SENSORS_PROXIMITY_HANDLE;
+	sSensorList[LOCAL_SENSORS-1].type		= SENSOR_TYPE_PROXIMITY;
+	sSensorList[LOCAL_SENSORS-1].maxRange	= 9.0f;
+	sSensorList[LOCAL_SENSORS-1].power		= 0.5f;
+	sSensorList[LOCAL_SENSORS-1].minDelay	= 10000;
+	sensors += 1;
 
     mSensor = mplSensor;
     mPollFds[mpl].fd = mSensor->getFd();
@@ -182,20 +198,27 @@ sensors_poll_context_t::sensors_poll_context_t() {
     mPollFds[light].fd = mLightSensor->getFd();
     mPollFds[light].events = POLLIN;
     mPollFds[light].revents = 0;
+
+    mPollFds[proximity].fd = mProximitySensor->getFd();
+    mPollFds[proximity].events = POLLIN;
+    mPollFds[proximity].revents = 0;
 }
 
 sensors_poll_context_t::~sensors_poll_context_t() {
     FUNC_LOG;
     delete mSensor;
     delete mCompassSensor;
-    delete mLightSensor;
+    delete mLightSensor;	
+    delete mProximitySensor;
 }
 
 int sensors_poll_context_t::activate(int handle, int enabled) {
     FUNC_LOG;  
     if (SENSORS_LIGHT_HANDLE == handle) {
         return mLightSensor->enable(handle, enabled);
-    }
+    } else if (SENSORS_PROXIMITY_HANDLE == handle) {
+        return mProximitySensor->enable(handle, enabled);
+   	}
     return mSensor->enable(handle, enabled);
 }
 
@@ -204,7 +227,9 @@ int sensors_poll_context_t::setDelay(int handle, int64_t ns)
     FUNC_LOG;
     if (SENSORS_LIGHT_HANDLE == handle) {
         return mLightSensor->setDelay(handle, ns);
-    }
+	} else if (SENSORS_PROXIMITY_HANDLE == handle) {
+		return mProximitySensor->setDelay(handle, ns);
+	}
     return mSensor->setDelay(handle, ns);
 }
 
@@ -297,7 +322,13 @@ int sensors_poll_context_t::pollEvents(sensors_event_t *data, int count)
                     count -= nb;
                     nbEvents += nb;
                     data += nb;
-                }
+				} else if (i == proximity) {
+					nb = mProximitySensor->readEvents(data, count);
+					mPollFds[i].revents = 0;
+					count -= nb;
+					nbEvents += nb;
+					data += nb;
+				}
             }
         }
         nb = ((MPLSensor*) mSensor)->readEvents(data, count);
