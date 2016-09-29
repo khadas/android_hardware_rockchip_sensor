@@ -49,6 +49,7 @@ enum {
     ID_GMRV,
     ID_SO,
     ID_L,
+    ID_P,
     ID_MAX
 };
 

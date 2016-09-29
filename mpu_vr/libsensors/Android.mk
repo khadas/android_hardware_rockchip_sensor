@@ -205,7 +205,7 @@ endif
 else    # eng, userdebug & user builds
 LOCAL_SRC_FILES := sensors_mpl.cpp
 endif   # eng, userdebug & user builds
-LOCAL_SRC_FILES += SamsungSensorBase.cpp LightSensor.cpp
+LOCAL_SRC_FILES += SamsungSensorBase.cpp LightSensor.cpp ProximitySensor.cpp
 LOCAL_SHARED_LIBRARIES := libinvensense_hal
 LOCAL_SHARED_LIBRARIES += libcutils
 LOCAL_SHARED_LIBRARIES += libutils
