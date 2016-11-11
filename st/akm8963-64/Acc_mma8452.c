@@ -110,7 +110,7 @@ void onTimeOut(sigval_t v);
 static int sAccFd = -1;
 
 /** timer, 用于定时超时之后 disable acc. 这里是 "系统 timer ID", 动态创建. */
-static timer_t sDisableAccTimer = -1;
+static timer_t sDisableAccTimer = NULL;
 /** 若在 ENABLE_TIME_OUT 秒内, akmd8975 没有再次读取 acc 数据, 则 disable acc 设备. */
 static const int ENABLE_TIME_OUT = 5; 
 
@@ -169,10 +169,10 @@ int16_t Acc_InitDevice(void)
 EXIT:
     if ( AKD_SUCCESS != result ) 
     {
-        if ( -1 != sDisableAccTimer )
+        if ( NULL != sDisableAccTimer )
         {
             timer_delete(sDisableAccTimer);
-            sDisableAccTimer = -1;
+            sDisableAccTimer = NULL;
         }
         if ( -1 != sAccFd )
         {
@@ -193,7 +193,7 @@ void Acc_DeinitDevice(void)
     ALOGI("Entered.");
 
     timer_delete(sDisableAccTimer);
-    sDisableAccTimer = -1;
+    sDisableAccTimer = NULL;
 
     /* 若 acc 设备已经被启动, 则... */
     if ( sHasEnabledAcc ) 
