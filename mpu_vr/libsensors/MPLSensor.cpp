@@ -3305,7 +3305,13 @@ void MPLSensor::fillAccel(const char* accel, struct sensor_t *list)
             list[Accelerometer].maxRange = ACCEL_MPU6500_RANGE;
             list[Accelerometer].resolution = ACCEL_MPU6500_RESOLUTION;
             list[Accelerometer].power = ACCEL_MPU6500_POWER;
+	    #ifdef SAMPLE_RATE_200HZ
+	    LOGV("---------ACCEL-----200HZ--------------\n");
+	    list[Accelerometer].minDelay = ACCEL_MPU6500_MINDELAY_200HZ;
+	    #else
+	    LOGV("---------ACCEL-----1KHZ----------------\n");
             list[Accelerometer].minDelay = ACCEL_MPU6500_MINDELAY;
+	    #endif
             return;
         } else if (accel != NULL && strcmp(accel, "MPU6515") == 0) {
             list[Accelerometer].maxRange = ACCEL_MPU6500_RANGE;
@@ -3361,7 +3367,13 @@ void MPLSensor::fillGyro(const char* gyro, struct sensor_t *list)
         list[Gyro].maxRange = GYRO_MPU6500_RANGE;
         list[Gyro].resolution = GYRO_MPU6500_RESOLUTION;
         list[Gyro].power = GYRO_MPU6500_POWER;
-        list[Gyro].minDelay = GYRO_MPU6500_MINDELAY;
+        #ifdef SAMPLE_RATE_200HZ
+	LOGV("---------GYRO-----200HZ--------------\n");
+	list[Gyro].minDelay = GYRO_MPU6500_MINDELAY_200HZ;
+	#else
+	LOGV("---------GYRO-----1KHZ--------------\n");
+	list[Gyro].minDelay = GYRO_MPU6500_MINDELAY;
+	#endif
     } else if( gyro != NULL && strcmp(gyro, "MPU6515") == 0) {
         list[Gyro].maxRange = GYRO_MPU6500_RANGE;
         list[Gyro].resolution = GYRO_MPU6500_RESOLUTION;
