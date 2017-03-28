@@ -24,7 +24,7 @@
 #include <sys/select.h>
 #include <cutils/log.h>
 #include <linux/input.h>
-
+#include <utils/SystemClock.h>
 #include <cutils/properties.h>
 
 #include "SensorBase.h"
@@ -144,10 +144,14 @@ bool SensorBase::hasPendingEvents() const
 
 int64_t SensorBase::getTimestamp()
 {
+#ifndef SENSOR_MPU_PAD
     struct timespec t;
     t.tv_sec = t.tv_nsec = 0;
     clock_gettime(CLOCK_MONOTONIC, &t);
     return int64_t(t.tv_sec) * 1000000000LL + t.tv_nsec;
+#else
+    return android::elapsedRealtimeNano();
+#endif
 }
 
 /*

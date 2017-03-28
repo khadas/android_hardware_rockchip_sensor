@@ -2479,7 +2479,9 @@ int MPLSensor::readEvents(sensors_event_t* data, int count)
         if (mEnabled & (1 << i)) {
             update = CALL_MEMBER_FN(this, mHandlers[i])(mPendingEvents + i);
             mPendingMask |= (1 << i);
-
+            #ifdef SENSOR_MPU_PAD
+            mPendingEvents[i].timestamp = getTimestamp();
+            #endif
             if (update && (count > 0)) {
                 *data++ = mPendingEvents[i];
                 count--;
