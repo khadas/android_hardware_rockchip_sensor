@@ -62,7 +62,10 @@
 */
 
 static struct sensor_t sSensorList[LOCAL_SENSORS];
+static struct sensor_t sSensorListCTS[LOCAL_SENSORS];
+
 static int sensors = (sizeof(sSensorList) / sizeof(sensor_t));
+static int numSensorsCTS = 0;
 
 static int open_sensors(const struct hw_module_t* module, const char* id,
                         struct hw_device_t** device);
@@ -70,8 +73,8 @@ static int open_sensors(const struct hw_module_t* module, const char* id,
 static int sensors__get_sensors_list(struct sensors_module_t* module,
                                      struct sensor_t const** list)
 {
-    *list = sSensorList;
-    return sensors;
+    *list = sSensorListCTS;
+    return numSensorsCTS;
 }
 
 static struct hw_module_methods_t sensors_module_methods = {
@@ -202,6 +205,32 @@ sensors_poll_context_t::sensors_poll_context_t() {
     mPollFds[proximity].fd = mProximitySensor->getFd();
     mPollFds[proximity].events = POLLIN;
     mPollFds[proximity].revents = 0;
+
+	/*Init sSensorListCTS added by hxw*/
+	memset(sSensorListCTS,0,sizeof(sSensorListCTS));
+#if GRAVITY_SENSOR_SUPPORT
+	memcpy(&sSensorListCTS[numSensorsCTS++],&sSensorList[MPLSensor::Gravity],sizeof(sensor_t));
+	memcpy(&sSensorListCTS[numSensorsCTS++],&sSensorList[MPLSensor::Accelerometer],sizeof(sensor_t));
+	memcpy(&sSensorListCTS[numSensorsCTS++],&sSensorList[MPLSensor::LinearAccel],sizeof(sensor_t));
+#endif
+#if GYROSCOPE_SENSOR_SUPPORT
+	memcpy(&sSensorListCTS[numSensorsCTS++],&sSensorList[MPLSensor::Gyro],sizeof(sensor_t));
+	memcpy(&sSensorListCTS[numSensorsCTS++],&sSensorList[MPLSensor::RawGyro],sizeof(sensor_t));
+#endif
+#if (GYROSCOPE_SENSOR_SUPPORT && GRAVITY_SENSOR_SUPPORT)
+	memcpy(&sSensorListCTS[numSensorsCTS++],&sSensorList[MPLSensor::Orientation],sizeof(sensor_t));
+	memcpy(&sSensorListCTS[numSensorsCTS++],&sSensorList[MPLSensor::RotationVector],sizeof(sensor_t));
+	memcpy(&sSensorListCTS[numSensorsCTS++],&sSensorList[MPLSensor::GameRotationVector],sizeof(sensor_t));
+#endif
+#if COMPASS_SENSOR_SUPPORT
+	memcpy(&sSensorListCTS[numSensorsCTS++],&sSensorList[MPLSensor::MagneticField],sizeof(sensor_t));
+#endif
+#if PROXIMITY_SENSOR_SUPPORT
+	memcpy(&sSensorListCTS[numSensorsCTS++],&sSensorList[LOCAL_SENSORS-1],sizeof(sensor_t));
+#endif
+#if LIGHT_SENSOR_SUPPORT
+	memcpy(&sSensorListCTS[numSensorsCTS++],&sSensorList[LOCAL_SENSORS-2],sizeof(sensor_t));
+#endif
 }
 
 sensors_poll_context_t::~sensors_poll_context_t() {
