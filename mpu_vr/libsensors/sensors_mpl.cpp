@@ -633,22 +633,38 @@ int main(int argc, char** argv)
     if (sensor_type_mask&SENSOR_TYPE_MASK(SENSOR_TYPE_ACCELEROMETER)) {
         printf("enable accel\n");
         ctx->activate(SENSORS_ACCELERATION_HANDLE, 1);
+	#ifdef SAMPLE_RATE_200HZ
+	ctx->setDelay(SENSORS_ACCELERATION_HANDLE, 5000000);
+	#else
         ctx->setDelay(SENSORS_ACCELERATION_HANDLE, 1000000);
+	#endif
     }
     if (sensor_type_mask&SENSOR_TYPE_MASK(SENSOR_TYPE_GYROSCOPE)) {
         printf("enable gyro\n");
         ctx->activate(SENSORS_GYROSCOPE_HANDLE, 1);
+	#ifdef SAMPLE_RATE_200HZ
+	ctx->setDelay(SENSORS_GYROSCOPE_HANDLE, 5000000);
+	#else
         ctx->setDelay(SENSORS_GYROSCOPE_HANDLE, 1000000);
+    	#endif	
     }
     if (sensor_type_mask&SENSOR_TYPE_MASK(SENSOR_TYPE_MAGNETIC_FIELD)) {
         printf("enable compass\n");
         ctx->activate(SENSORS_MAGNETIC_FIELD_HANDLE, 1);
+	#ifdef SAMPLE_RATE_200HZ
+	ctx->setDelay(SENSORS_MAGNETIC_FIELD_HANDLE, 50000000);
+	#else
         ctx->setDelay(SENSORS_MAGNETIC_FIELD_HANDLE, 10000000);
+	#endif
     }
     if (sensor_type_mask&SENSOR_TYPE_MASK(SENSOR_TYPE_LIGHT)) {
         printf("enable light\n");
         ctx->activate(SENSORS_LIGHT_HANDLE, 1);
+	#ifdef SAMPLE_RATE_200HZ
+	ctx->setDelay(SENSORS_LIGHT_HANDLE, 500000000);
+	#else
         ctx->setDelay(SENSORS_LIGHT_HANDLE, 100000000);
+	#endif
     }
     if (sensor_type_mask&SENSOR_TYPE_MASK(SENSOR_TYPE_PRESSURE)) {
         // unsupport;
