@@ -29,7 +29,12 @@
 #define AKM_MEASURE_RETRY_NUM	5
 int s_fdDev = -1;
 
+#ifdef AKMD_FOR_AK09911
+#define MSENSOR_NAME      "/dev/akm_dev"
+#else
 #define MSENSOR_NAME      "/dev/akm8963_dev"
+#endif
+
 #define GSENSOR_NAME      "/dev/gsensor"
 int g_file_acc = -1;
 

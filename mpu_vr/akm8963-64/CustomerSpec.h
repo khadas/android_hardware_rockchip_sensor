@@ -30,7 +30,11 @@
 
 // Certification information
 #define CSPEC_CI_LICENSER	"ASAHIKASEI"
+#ifdef AKMD_FOR_AK09911
+#define CSPEC_CI_LICENSEE	"RC_11_V7_AR_64"
+#else
 #define CSPEC_CI_LICENSEE	"RC_63_V7_AR_64"
+#endif
 
 // Parameters for Average
 //  The number of magnetic data to be averaged.

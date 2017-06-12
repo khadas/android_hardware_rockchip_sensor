@@ -5,7 +5,11 @@ LOCAL_PATH:= $(call my-dir)
 
 SMARTCOMPASS_LIB=libSmartCompass
 
+ifeq ($(strip $(BOARD_SENSOR_COMPASS_AK09911)), true)
+AKMD_DEVICE_TYPE := 9911
+else
 AKMD_DEVICE_TYPE := 8963
+endif
 AKMD_ACC_AOT := yes
 
 include $(CLEAR_VARS)
