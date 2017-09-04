@@ -105,7 +105,7 @@ struct sensors_poll_context_t {
     int setDelay(int handle, int64_t ns);
     int pollEvents(sensors_event_t* data, int count);
     int batch(int handle, int flags, int64_t period_ns, int64_t timeout);
-    
+    int flush(int handle); 
 
 
 private:
@@ -160,6 +160,13 @@ sensors_poll_context_t::sensors_poll_context_t() {
 	sSensorList[LOCAL_SENSORS-2].resolution = 1.0f;
 	sSensorList[LOCAL_SENSORS-2].power      = 0.5f;
 	sSensorList[LOCAL_SENSORS-2].minDelay   = 20000;
+
+        sSensorList[LOCAL_SENSORS-2].fifoReservedEventCount   = 0;
+        sSensorList[LOCAL_SENSORS-2].fifoMaxEventCount   = 0;
+        sSensorList[LOCAL_SENSORS-2].stringType = 0;
+        sSensorList[LOCAL_SENSORS-2].requiredPermission = 0;
+        sSensorList[LOCAL_SENSORS-2].maxDelay = 200000;
+        sSensorList[LOCAL_SENSORS-2].flags = SENSOR_FLAG_CONTINUOUS_MODE;
     sensors += 1;
 
 	memset(&sSensorList[LOCAL_SENSORS-1], 0, sizeof(sSensorList[0]));
@@ -171,6 +178,13 @@ sensors_poll_context_t::sensors_poll_context_t() {
 	sSensorList[LOCAL_SENSORS-1].maxRange	= 9.0f;
 	sSensorList[LOCAL_SENSORS-1].power		= 0.5f;
 	sSensorList[LOCAL_SENSORS-1].minDelay	= 10000;
+
+        sSensorList[LOCAL_SENSORS-1].fifoReservedEventCount   = 0;
+        sSensorList[LOCAL_SENSORS-1].fifoMaxEventCount   = 0;
+        sSensorList[LOCAL_SENSORS-1].stringType = 0;
+        sSensorList[LOCAL_SENSORS-1].requiredPermission = 0;
+        sSensorList[LOCAL_SENSORS-1].maxDelay = 200000;
+        sSensorList[LOCAL_SENSORS-1].flags = SENSOR_FLAG_CONTINUOUS_MODE;
 	sensors += 1;
 
     mSensor = mplSensor;
@@ -242,7 +256,6 @@ sensors_poll_context_t::~sensors_poll_context_t() {
 }
 
 int sensors_poll_context_t::activate(int handle, int enabled) {
-    FUNC_LOG;  
     if (SENSORS_LIGHT_HANDLE == handle) {
         return mLightSensor->enable(handle, enabled);
     } else if (SENSORS_PROXIMITY_HANDLE == handle) {
@@ -253,7 +266,6 @@ int sensors_poll_context_t::activate(int handle, int enabled) {
 
 int sensors_poll_context_t::setDelay(int handle, int64_t ns)
 {
-    FUNC_LOG;
     if (SENSORS_LIGHT_HANDLE == handle) {
         return mLightSensor->setDelay(handle, ns);
 	} else if (SENSORS_PROXIMITY_HANDLE == handle) {
@@ -304,6 +316,9 @@ static int debug_lvl = 0;
 /* print sensor data latency */
 static int debug_time = 0;
 #include <cutils/properties.h>
+
+/* for sensor flush */
+static int sensor_flush[32];
 
 int sensors_poll_context_t::pollEvents(sensors_event_t *data, int count)
 {
@@ -359,6 +374,7 @@ int sensors_poll_context_t::pollEvents(sensors_event_t *data, int count)
         nb = ((MPLSensor*) mSensor)->readEvents(data, count);
         LOGI_IF(0, "sensors_mpl:readEvents() - nb=%d, count=%d, nbEvents=%d, data->timestamp=%lld, data->data[0]=%f,",
                           nb, count, nbEvents, data->timestamp, data->data[0]);
+
 #if SENSOR_KEEP_ALIVE
         for (i=0; i<nb; i++) {
             if (data[i].sensor>=0 && sensor_activate[data[i].sensor]>0) {
@@ -434,8 +450,28 @@ int sensors_poll_context_t::pollEvents(sensors_event_t *data, int count)
             nbEvents += nb;
             data += nb;
         }
-    }
 
+#if 1
+        for (i=0; i<32; i++) {
+                if (sensor_flush[i] && count > 0) {
+                        sensors_event_t temp;
+                        temp.version = 0;
+                        temp.sensor = 0;
+                        temp.reserved0 = 0;
+                        temp.timestamp = 0LL;
+                        temp.type = SENSOR_TYPE_META_DATA;
+                        temp.meta_data.what = META_DATA_FLUSH_COMPLETE;
+                        temp.meta_data.sensor = i;
+                        *data = temp;
+                        nbEvents++;
+			data++;
+			count--;
+                        sensor_flush[i] = 0;
+                }
+        }
+#endif
+
+    }
 
     return nbEvents;
 }
@@ -471,6 +507,8 @@ static int poll__activate(struct sensors_poll_device_t *dev,
     property_get("sensor.debug.level", propbuf, "0");
     debug_lvl = atoi(propbuf);
 
+    LOGV("set active: handle = %d, enable = %d\n", handle, enabled);
+
     return ctx->activate(handle, enabled);
 }
 
@@ -484,6 +522,8 @@ static int poll__setDelay(struct sensors_poll_device_t *dev,
     }
     sensor_delay[handle] = ns;
 #endif
+
+    LOGV("set delay: handle = %d, delay = %dns\n", handle, ns);
 
     sensors_poll_context_t *ctx = (sensors_poll_context_t *)dev;
     int s= ctx->setDelay(handle, ns);
@@ -513,7 +553,25 @@ static int poll__batch(struct sensors_poll_device_1 *dev,
                       int handle, int flags, int64_t period_ns, int64_t timeout)
 {
     sensors_poll_context_t *ctx = (sensors_poll_context_t *)dev;
-    return ctx->batch(handle, flags, period_ns, timeout);
+
+    LOGV("set batch: handle = %d, period_ns = %dns, timeout = %dns\n", handle, period_ns, timeout);
+#if SENSOR_KEEP_ALIVE
+    if (sensor_delay[handle] == period_ns) {
+//        LOGD("keep sensor(%d) delay %d ns", handle, period_ns);
+        return 0;
+    }
+    sensor_delay[handle] = period_ns;
+#endif
+
+    return ctx->setDelay(handle, period_ns);
+}
+
+static int poll__flush(struct sensors_poll_device_1 *dev,
+                      int handle)
+{
+    LOGV("set flush: handle = %d\n", handle);
+    sensor_flush[handle] = 1;
+    return 0;
 }
 
 /******************************************************************************/
@@ -534,7 +592,7 @@ static int open_sensors(const struct hw_module_t* module, const char* id,
     memset(&dev->device, 0, sizeof(sensors_poll_device_1));
 
     dev->device.common.tag = HARDWARE_DEVICE_TAG;
-    dev->device.common.version  = SENSORS_DEVICE_API_VERSION_1_0;
+    dev->device.common.version  = SENSORS_DEVICE_API_VERSION_1_3;
     dev->device.common.module   = const_cast<hw_module_t*>(module);
     dev->device.common.close    = poll__close;
     dev->device.activate        = poll__activate;
@@ -543,6 +601,7 @@ static int open_sensors(const struct hw_module_t* module, const char* id,
 
     /* Batch processing */
     dev->device.batch           = poll__batch; 
+    dev->device.flush           = poll__flush;
 
     *device = &dev->device.common;
     status = 0;
@@ -553,6 +612,8 @@ static int open_sensors(const struct hw_module_t* module, const char* id,
     memset(sensor_delay, 0, 32*sizeof(int));
     memset(sensor_prev_time, 0, 32*sizeof(int64_t));
 #endif
+
+    memset(sensor_flush, 0, 32*sizeof(int));
 
     property_get("sensor.debug.time", propbuf, "0");
     debug_time = atoi(propbuf);

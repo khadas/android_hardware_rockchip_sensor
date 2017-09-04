@@ -125,7 +125,7 @@ AkmSensor::~AkmSensor() {
 int AkmSensor::setEnable(int32_t handle, int en)
 {
     VFUNC_LOG;
-	D("Entered : handle = 0x%x, en = 0x%x.", handle, en);
+	//D("Entered : handle = 0x%x, en = 0x%x.", handle, en);
     int what = -1;
     switch (handle) {
         case ID_M: what = MagneticField; break;
@@ -168,7 +168,7 @@ EXIT:
 	if ( !mEnabled ) {
     	close_device();
 	}
-    D("to exit : mEnabled = 0x%x.", mEnabled);
+    //D("to exit : mEnabled = 0x%x.", mEnabled);
     return err;
 }
 
@@ -181,7 +181,7 @@ int AkmSensor::getEnable(int32_t handle)
 int AkmSensor::setDelay(int32_t handle, int64_t ns)
 {
     VFUNC_LOG;
-	D("Entered : handle = 0x%x, ns = %lld.", handle, ns);
+	//D("Entered : handle = 0x%x, ns = %lld.", handle, ns);
 #ifdef ECS_IOCTL_APP_SET_DELAY
     int what = -1;
     switch (handle) {
