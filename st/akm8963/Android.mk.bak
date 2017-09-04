@@ -8,7 +8,7 @@ LOCAL_CFLAGS += \
 	-Wno-unused-parameter
 
 LOCAL_C_INCLUDES := \
-	$(LOCAL_PATH)/libAK8963 
+	$(LOCAL_PATH)/libAK8963
 
 LOCAL_SRC_FILES:= \
 	AK8963Driver.c \
