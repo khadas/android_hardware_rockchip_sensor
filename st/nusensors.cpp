@@ -127,12 +127,12 @@ static int sensor_get_calibration_from_vendor1(void)
 		gAccelCaliData[2] = gAccelCaliData[2]*1000;
 
 	}
-	
+
 	close(sCaliFd);
 	sCaliFd = -1;
 
 	ALOGD("%s:gAccelCaliData=%d,%d,%d\n",__func__, gAccelCaliData[0], gAccelCaliData[1], gAccelCaliData[2]);
-	
+
     return 0;
 }
 
@@ -141,21 +141,23 @@ static int sensor_get_calibration_from_vendor1(void)
 /*****************************************************************************/
 
 struct sensors_poll_context_t {
-    struct sensors_poll_device_t device; // must be first
+    sensors_poll_device_1_t device; // must be first
 
         sensors_poll_context_t();
         ~sensors_poll_context_t();
     int activate(int handle, int enabled);
     int setDelay(int handle, int64_t ns);
     int pollEvents(sensors_event_t* data, int count);
+    int batch(int handle, int flags, int64_t period_ns, int64_t timeout);
+    int flush(int handle);
 
 private:
-    enum {		
+    enum {
         light           = 0,
         proximity       = 1,
         mma             = 2,
         akm             = 3,
-        gyro            = 4, 
+        gyro            = 4,
         pressure        = 5,
         temperature		= 6,
         numSensorDrivers,
@@ -278,9 +280,12 @@ int sensors_poll_context_t::setDelay(int handle, int64_t ns) {
     return mSensors[index]->setDelay(handle, ns);
 }
 
+static int sensor_flush[32] = {0};
+
 int sensors_poll_context_t::pollEvents(sensors_event_t* data, int count)
 {
 	D("Entered : count = %d", count);
+    int i;
     int nbEvents = 0;
     int n = 0;
 
@@ -327,9 +332,30 @@ int sensors_poll_context_t::pollEvents(sensors_event_t* data, int count)
                 mPollFds[wake].revents = 0;
             }
         }
+
         // if we have events and space, go read them
 		D("n =0x%x, count = 0x%x.", n, count);
     } while (n && count);
+
+#if 1
+        for (i=0; i<32; i++) {
+                if (sensor_flush[i] && count > 0) {
+                        sensors_event_t temp;
+                        temp.version = 0;
+                        temp.sensor = 0;
+                        temp.reserved0 = 0;
+                        temp.timestamp = 0LL;
+                        temp.type = SENSOR_TYPE_META_DATA;
+                        temp.meta_data.what = META_DATA_FLUSH_COMPLETE;
+                        temp.meta_data.sensor = i;
+                        *(data) = temp;
+			data++;
+                        nbEvents++;
+			count--;
+                        sensor_flush[i] = 0;
+                }
+        }
+#endif
 
 	D("to return : nbEvents = %d", nbEvents);
     return nbEvents;
@@ -365,6 +391,23 @@ static int poll__poll(struct sensors_poll_device_t *dev,
     return ctx->pollEvents(data, count);
 }
 
+static int poll__batch(struct sensors_poll_device_1 *dev,
+                      int handle, int flags, int64_t period_ns, int64_t timeout)
+{
+    LOGV("set batch: handle = %d, period_ns = %dns, timeout = %dns\n", handle, period_ns, timeout);
+
+    sensors_poll_context_t *ctx = (sensors_poll_context_t *)dev;
+    return ctx->setDelay(handle, period_ns);
+}
+
+static int poll__flush(struct sensors_poll_device_1 *dev,
+                      int handle)
+{
+    LOGV("set flush: handle = %d\n", handle);
+    sensor_flush[handle] = 1;
+    return 0;
+}
+
 /*****************************************************************************/
 
 int init_nusensors(hw_module_t const* module, hw_device_t** device)
@@ -373,17 +416,24 @@ int init_nusensors(hw_module_t const* module, hw_device_t** device)
     int status = -EINVAL;
 
     sensors_poll_context_t *dev = new sensors_poll_context_t();
-    memset(&dev->device, 0, sizeof(sensors_poll_device_t));
+    memset(&dev->device, 0, sizeof(sensors_poll_device_1));
 
     dev->device.common.tag = HARDWARE_DEVICE_TAG;
-    dev->device.common.version  = 0;
+    dev->device.common.version  = SENSORS_DEVICE_API_VERSION_1_3;
     dev->device.common.module   = const_cast<hw_module_t*>(module);
     dev->device.common.close    = poll__close;
     dev->device.activate        = poll__activate;
     dev->device.setDelay        = poll__setDelay;
     dev->device.poll            = poll__poll;
 
+    /* Batch processing */
+    dev->device.batch           = poll__batch;
+    dev->device.flush           = poll__flush;
+
     *device = &dev->device.common;
+
+    memset(sensor_flush, 0, 32*sizeof(int));
+
     status = 0;
     return status;
 }
