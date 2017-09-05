@@ -32,7 +32,7 @@
 
 static const struct sensor_t sSensorList[] = {
         #ifdef GRAVITY_SENSOR_SUPPORT
-        { .name       = "Gravity sensor",
+        { .name       = "Accelerometer sensor",
           .vendor     = "The Android Open Source Project",
           .version    = 1,
           .handle     = SENSORS_HANDLE_BASE+ID_A,
@@ -41,6 +41,12 @@ static const struct sensor_t sSensorList[] = {
           .resolution = (4.0f*9.81f)/256.0f,
           .power      = 0.2f,
           .minDelay   = 10000,
+          .fifoReservedEventCount = 0,
+          .fifoMaxEventCount = 0,
+          .stringType = 0,
+          .requiredPermission = 0,
+          .maxDelay = 200000,
+          .flags = SENSOR_FLAG_CONTINUOUS_MODE,
           .reserved   = {}
         },
         #endif
@@ -54,6 +60,12 @@ static const struct sensor_t sSensorList[] = {
           .resolution = 1.0f/16.0f,
           .power      = 6.8f,
           .minDelay   = 10000,
+          .fifoReservedEventCount = 0,
+          .fifoMaxEventCount = 0,
+          .stringType = 0,
+          .requiredPermission = 0,
+          .maxDelay = 200000,
+          .flags = SENSOR_FLAG_CONTINUOUS_MODE,
           .reserved   = {}
         },
 
@@ -66,6 +78,12 @@ static const struct sensor_t sSensorList[] = {
           .resolution = 1.0f,
           .power      = 7.0f,
           .minDelay   = 10000,
+          .fifoReservedEventCount = 0,
+          .fifoMaxEventCount = 0,
+          .stringType = 0,
+          .requiredPermission = 0,
+          .maxDelay = 200000,
+          .flags = SENSOR_FLAG_CONTINUOUS_MODE,
           .reserved   = {}
         },
         #endif
@@ -79,6 +97,12 @@ static const struct sensor_t sSensorList[] = {
           .resolution = CONVERT_GYRO,
           .power      = 6.1f,
           .minDelay   = 10000,
+          .fifoReservedEventCount = 0,
+          .fifoMaxEventCount = 0,
+          .stringType = 0,
+          .requiredPermission = 0,
+          .maxDelay = 200000,
+          .flags = SENSOR_FLAG_CONTINUOUS_MODE,
           .reserved   = {}
         },
         #endif
@@ -92,6 +116,12 @@ static const struct sensor_t sSensorList[] = {
           .resolution = PROXIMITY_THRESHOLD_CM,
           .power      = 0.5f,
           .minDelay   = 10000,
+          .fifoReservedEventCount = 0,
+          .fifoMaxEventCount = 0,
+          .stringType = 0,
+          .requiredPermission = 0,
+          .maxDelay = 200000,
+          .flags = SENSOR_FLAG_CONTINUOUS_MODE,
           .reserved   = {}
         },
         #endif
@@ -105,6 +135,12 @@ static const struct sensor_t sSensorList[] = {
           .resolution = 1.0f,
           .power      = 0.5f,
           .minDelay   = 10000,
+          .fifoReservedEventCount = 0,
+          .fifoMaxEventCount = 0,
+          .stringType = 0,
+          .requiredPermission = 0,
+          .maxDelay = 200000,
+          .flags = SENSOR_FLAG_CONTINUOUS_MODE,
           .reserved   = {}
         },
         #endif
@@ -118,6 +154,12 @@ static const struct sensor_t sSensorList[] = {
           .resolution = 1.0f,
           .power      = 1.0f,
           .minDelay   = 10000,
+          .fifoReservedEventCount = 0,
+          .fifoMaxEventCount = 0,
+          .stringType = 0,
+          .requiredPermission = 0,
+          .maxDelay = 200000,
+          .flags = SENSOR_FLAG_CONTINUOUS_MODE,
           .reserved   = {}
         },
         #endif
@@ -131,6 +173,12 @@ static const struct sensor_t sSensorList[] = {
           .resolution = 1.0f,
           .power      = 1.0f,
           .minDelay   = 10000,
+          .fifoReservedEventCount = 0,
+          .fifoMaxEventCount = 0,
+          .stringType = 0,
+          .requiredPermission = 0,
+          .maxDelay = 200000,
+          .flags = SENSOR_FLAG_CONTINUOUS_MODE,
           .reserved   = {}
         },
         #endif
