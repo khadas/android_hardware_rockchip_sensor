@@ -308,34 +308,34 @@ include $(BUILD_PREBUILT)
 endif
 
 # Build self_test bin
-#ifeq (${TARGET_ARCH},arm64)
+ifeq (${TARGET_ARCH},arm64)
 
-#include $(CLEAR_VARS)
+include $(CLEAR_VARS)
 
-#LOCAL_MODULE := self_test
+LOCAL_MODULE := inv_self_test
 #LOCAL_32_BIT_ONLY := true
-#LOCAL_CFLAGS += -DLINUX
+LOCAL_CFLAGS += -DLINUX
 
-#LOCAL_C_INCLUDES += $(LOCAL_PATH)/software/core/mllite
-#LOCAL_C_INCLUDES += $(LOCAL_PATH)/software/core/mllite/linux
-#LOCAL_C_INCLUDES += $(LOCAL_PATH)/software/core/mpl
-#LOCAL_C_INCLUDES += $(LOCAL_PATH)/software/core/driver/include
-#LOCAL_C_INCLUDES += $(LOCAL_PATH)/software/core/driver/include/linux
+LOCAL_C_INCLUDES += $(LOCAL_PATH)/software/core/mllite
+LOCAL_C_INCLUDES += $(LOCAL_PATH)/software/core/mllite/linux
+LOCAL_C_INCLUDES += $(LOCAL_PATH)/software/core/mpl
+LOCAL_C_INCLUDES += $(LOCAL_PATH)/software/core/driver/include
+LOCAL_C_INCLUDES += $(LOCAL_PATH)/software/core/driver/include/linux
 
-#LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE_TAGS := optional
 
-#LOCAL_SRC_FILES := software/simple_apps/self_test/inv_self_test.c
+LOCAL_SRC_FILES := software/simple_apps/self_test/inv_self_test.c
 
-#LOCAL_SHARED_LIBRARIES += libcutils
-#LOCAL_SHARED_LIBRARIES += libutils
-#LOCAL_SHARED_LIBRARIES += libdl
-#LOCAL_SHARED_LIBRARIES += libc
-#LOCAL_SHARED_LIBRARIES += libm
-#LOCAL_SHARED_LIBRARIES += libz
-#LOCAL_SHARED_LIBRARIES += libstdc++
-#LOCAL_SHARED_LIBRARIES += liblog
-#LOCAL_SHARED_LIBRARIES += libmplmpu
-#LOCAL_SHARED_LIBRARIES += libmllite
-#include $(BUILD_EXECUTABLE)
+LOCAL_SHARED_LIBRARIES += libcutils
+LOCAL_SHARED_LIBRARIES += libutils
+LOCAL_SHARED_LIBRARIES += libdl
+LOCAL_SHARED_LIBRARIES += libc
+LOCAL_SHARED_LIBRARIES += libm
+LOCAL_SHARED_LIBRARIES += libz
+LOCAL_SHARED_LIBRARIES += libstdc++
+LOCAL_SHARED_LIBRARIES += liblog
+LOCAL_SHARED_LIBRARIES += libmplmpu
+LOCAL_SHARED_LIBRARIES += libmllite
+include $(BUILD_EXECUTABLE)
 
-#endif
+endif
