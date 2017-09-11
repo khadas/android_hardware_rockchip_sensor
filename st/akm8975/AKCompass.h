@@ -26,15 +26,15 @@
 //**************************************
 // Include files for AK8975  library.
 //**************************************
-#include "libAK8975/AK8975.h"
-#include "libAK8975/AKConfigure.h"
-#include "libAK8975/AKMDevice.h"
-#include "libAK8975/AKCertification.h"
-#include "libAK8975/AKDirection6D.h"
-#include "libAK8975/AKHDOE.h"
-#include "libAK8975/AKHFlucCheck.h"
-#include "libAK8975/AKManualCal.h"
-#include "libAK8975/AKVersion.h"
+#include "AK8975.h"
+#include "AKConfigure.h"
+#include "AKMDevice.h"
+#include "AKCertification.h"
+#include "AKDirection6D.h"
+#include "AKHDOE.h"
+#include "AKHFlucCheck.h"
+#include "AKManualCal.h"
+#include "AKVersion.h"
 
 /*** Constant definition ******************************************************/
 #define	THETAFILTER_SCALE	4128

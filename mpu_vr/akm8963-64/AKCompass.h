@@ -31,18 +31,18 @@
 //**************************************
 // Include files for SmartCompass library.
 //**************************************
-#include "libSmartCompass/AKCertification.h"
-#include "libSmartCompass/AKConfigure.h"
-#include "libSmartCompass/AKDecomp.h"
-#include "libSmartCompass/AKMDevice.h"
-#include "libSmartCompass/AKMDeviceF.h"
-#include "libSmartCompass/AKDirection6D.h"
-#include "libSmartCompass/AKHDOE.h"
-#include "libSmartCompass/AKHFlucCheck.h"
-#include "libSmartCompass/AKManualCal.h"
-#include "libSmartCompass/AKVersion.h"
-#include "libSmartCompass/AKPseudoGyro.h"
-#include "libSmartCompass/AKDOEPlus.h"
+#include "AKCertification.h"
+#include "AKConfigure.h"
+#include "AKDecomp.h"
+#include "AKMDevice.h"
+#include "AKMDeviceF.h"
+#include "AKDirection6D.h"
+#include "AKHDOE.h"
+#include "AKHFlucCheck.h"
+#include "AKManualCal.h"
+#include "AKVersion.h"
+#include "AKPseudoGyro.h"
+#include "AKDOEPlus.h"
 
 /*** Constant definition ******************************************************/
 #define	THETAFILTER_SCALE	4128

@@ -31,15 +31,15 @@
 //**************************************
 // Include files for SmartCompass library.
 //**************************************
-#include "libSmartCompass/AKCertification.h"
-#include "libSmartCompass/AKConfigure.h"
-#include "libSmartCompass/AKDecomp.h"
-#include "libSmartCompass/AKMDevice.h"
-#include "libSmartCompass/AKDirection6D.h"
-#include "libSmartCompass/AKHDOE.h"
-#include "libSmartCompass/AKHFlucCheck.h"
-#include "libSmartCompass/AKManualCal.h"
-#include "libSmartCompass/AKVersion.h"
+#include "AKCertification.h"
+#include "AKConfigure.h"
+#include "AKDecomp.h"
+#include "AKMDevice.h"
+#include "AKDirection6D.h"
+#include "AKHDOE.h"
+#include "AKHFlucCheck.h"
+#include "AKManualCal.h"
+#include "AKVersion.h"
 
 
 /*** Constant definition ******************************************************/
