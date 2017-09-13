@@ -22,6 +22,7 @@ ifeq (${TARGET_ARCH},arm64)
 include $(CLEAR_VARS)
 LOCAL_MODULE_SUFFIX := .so
 LOCAL_MODULE := libmplmpu
+LOCAL_PROPRIETARY_MODULE := true
 LOCAL_MODULE_CLASS := SHARED_LIBRARIES
 LOCAL_SRC_FILES_arm := libmplmpu.so
 LOCAL_32_BIT_ONLY := true
@@ -30,6 +31,7 @@ include $(BUILD_PREBUILT)
 include $(CLEAR_VARS)
 LOCAL_MODULE_SUFFIX := .so
 LOCAL_MODULE := libmplmpu
+LOCAL_PROPRIETARY_MODULE := true
 LOCAL_MODULE_CLASS := SHARED_LIBRARIES
 LOCAL_SRC_FILES_arm64 := libmplmpu_64.so
 include $(BUILD_PREBUILT)
@@ -41,6 +43,7 @@ ifeq (${TARGET_ARCH},arm64)
 include $(CLEAR_VARS)
 LOCAL_MODULE_SUFFIX := .so
 LOCAL_MODULE := libmllite
+LOCAL_PROPRIETARY_MODULE := true
 LOCAL_MODULE_CLASS := SHARED_LIBRARIES
 LOCAL_SRC_FILES_arm := libmllite.so
 LOCAL_32_BIT_ONLY := true
@@ -49,6 +52,7 @@ include $(BUILD_PREBUILT)
 include $(CLEAR_VARS)
 LOCAL_MODULE_SUFFIX := .so
 LOCAL_MODULE := libmllite
+LOCAL_PROPRIETARY_MODULE := true
 LOCAL_MODULE_CLASS := SHARED_LIBRARIES
 LOCAL_SRC_FILES_arm64 := libmllite_64.so
 include $(BUILD_PREBUILT)
@@ -59,6 +63,7 @@ endif
 include $(CLEAR_VARS)
 
 LOCAL_MODULE := libinvensense_hal
+LOCAL_PROPRIETARY_MODULE := true
 LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE_OWNER := invensense
 
@@ -173,6 +178,7 @@ include $(BUILD_SHARED_LIBRARY)
 include $(CLEAR_VARS)
 
 LOCAL_MODULE := sensors.rk30board
+LOCAL_PROPRIETARY_MODULE := true
 $(info YD>>LOCAL_MODULE=$(LOCAL_MODULE))
 
 ifdef TARGET_2ND_ARCH
@@ -273,6 +279,7 @@ sensor_cflags := $(LOCAL_CFLAGS)
 sensor_c_include := $(LOCAL_C_INCLUDES)
 include $(CLEAR_VARS)
 LOCAL_MODULE := sensor_test
+LOCAL_PROPRIETARY_MODULE := true
 LOCAL_SRC_FILES := $(sensor_src_files)
 LOCAL_SHARED_LIBRARIES := $(sensor_shared_lib)
 LOCAL_CFLAGS := $(sensor_cflags)
@@ -285,6 +292,7 @@ ifneq (${TARGET_ARCH},arm64)
 
 include $(CLEAR_VARS)
 LOCAL_MODULE := libmplmpu
+LOCAL_PROPRIETARY_MODULE := true
 LOCAL_SRC_FILES := libmplmpu.so
 LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE_OWNER := invensense
@@ -296,6 +304,7 @@ include $(BUILD_PREBUILT)
 
 include $(CLEAR_VARS)
 LOCAL_MODULE := libmllite
+LOCAL_PROPRIETARY_MODULE := true
 LOCAL_SRC_FILES := libmllite.so
 LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE_OWNER := invensense
@@ -313,6 +322,7 @@ ifeq (${TARGET_ARCH},arm64)
 include $(CLEAR_VARS)
 
 LOCAL_MODULE := inv_self_test
+LOCAL_PROPRIETARY_MODULE := true
 #LOCAL_32_BIT_ONLY := true
 LOCAL_CFLAGS += -DLINUX
 
