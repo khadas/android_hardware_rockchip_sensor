@@ -320,22 +320,24 @@ int sensors_poll_context_t::pollEvents(sensors_event_t* data, int count)
             // some events immediately or just wait if we don't have
             // anything to return
             n = poll(mPollFds, numFds, nbEvents ? 0 : -1);
-            if (n<0) {
+            if (n < 0) {
                 LOGE("poll() failed (%s)", strerror(errno));
-                return -errno;
+                //return -errno;
             }
-            if (mPollFds[wake].revents & POLLIN) {
-                char msg;
-                int result = read(mPollFds[wake].fd, &msg, 1);
-                LOGE_IF(result<0, "error reading from wake pipe (%s)", strerror(errno));
-                LOGE_IF(msg != WAKE_MESSAGE, "unknown message on wake queue (0x%02x)", int(msg));
-                mPollFds[wake].revents = 0;
+            if (n > 0) {
+                if (mPollFds[wake].revents & POLLIN) {
+                    char msg;
+                    int result = read(mPollFds[wake].fd, &msg, 1);
+                    LOGE_IF(result<0, "error reading from wake pipe (%s)", strerror(errno));
+                    LOGE_IF(msg != WAKE_MESSAGE, "unknown message on wake queue (0x%02x)", int(msg));
+                    mPollFds[wake].revents = 0;
+                }
             }
         }
 
         // if we have events and space, go read them
 		D("n =0x%x, count = 0x%x.", n, count);
-    } while (n && count);
+    } while (n>0 && count>0);
 
 #if 1
         for (i=0; i<32; i++) {
