@@ -37,107 +37,6 @@
 #include "PressureSensor.h"
 #include "TemperatureSensor.h"
 
-#if defined(CALIBRATION_SUPPORT)
-typedef		unsigned short	    uint16;
-typedef		unsigned long	    uint32;
-typedef		unsigned char	    uint8;
-
-#include <fcntl.h>
-#include <sys/ioctl.h>
-
-#define RKNAND_DIASBLE_SECURE_BOOT _IOW('d', 127, unsigned int)
-#define RKNAND_ENASBLE_SECURE_BOOT _IOW('d', 126, unsigned int)
-#define RKNAND_GET_SN_SECTOR       _IOW('d', 3, unsigned int)
-
-#define RKNAND_GET_VENDOR_SECTOR0       _IOW('v', 16, unsigned int)
-#define RKNAND_STORE_VENDOR_SECTOR0     _IOW('v', 17, unsigned int)
-
-#define RKNAND_GET_VENDOR_SECTOR1       _IOW('v', 18, unsigned int)
-#define RKNAND_STORE_VENDOR_SECTOR1     _IOW('v', 19, unsigned int)
-
-#define DRM_KEY_OP_TAG              0x4B4D5244 // "DRMK" 
-#define SN_SECTOR_OP_TAG            0x41444E53 // "SNDA"
-#define DIASBLE_SECURE_BOOT_OP_TAG  0x42534444 // "DDSB"
-#define ENASBLE_SECURE_BOOT_OP_TAG  0x42534E45 // "ENSB"
-#define VENDOR_SECTOR_OP_TAG        0x444E4556 // "VEND"
-
-#define RKNAND_SYS_STORGAE_DATA_LEN 512
-
-typedef struct tagRKNAND_SYS_STORGAE
-{
-    uint32  tag;
-    uint32  len;
-    uint8   data[RKNAND_SYS_STORGAE_DATA_LEN];
-}RKNAND_SYS_STORGAE;
-
-
-typedef struct tagSN_SECTOR_INFO
-{
-    uint32 snSectag;           // "SNDA" 0x41444E53
-    uint32 snSecLen;           // 512
-    uint16 snLen;              // 0:no sn , 0~30,sn len
-    uint8 snData[30];          // sn data
-    uint32 reserved2[(0x200-0x20)/4];
-}SN_SECTOR_INFO,*pSN_SECTOR_INFO;
-
-#define MAX_COUNT_CALIBRATION 100
-static int sCaliFd = -1;
-static int gCountCali = 0;
-static RKNAND_SYS_STORGAE gCalibrationData;
-static int gAccelCaliData[3] = {0, 0, 0};
-
-
-static int sensor_get_calibration_from_vendor1(void)
-{
-    uint32 i;
-    int ret ;
-
-    int sCaliFd = open("/dev/rknand_sys_storage",O_RDWR,0);
-    if(sCaliFd < 0){
-        ALOGE("open /dev/rknand_sys_storage open fail:%s\n",strerror(errno));
-        return -1;
-    }
-
-    gCalibrationData.tag = VENDOR_SECTOR_OP_TAG;
-    gCalibrationData.len = RKNAND_SYS_STORGAE_DATA_LEN-8;
-
-    ret = ioctl(sCaliFd, RKNAND_GET_VENDOR_SECTOR1, &gCalibrationData);
-    if(ret){
-        ALOGE("get vendor_sector error:%s\n",strerror(errno));		
-		close(sCaliFd);
-        return -1;
-    }
-
-
-	if(((gCalibrationData.data[0]&0x7f) > 120) || ((gCalibrationData.data[1]&0x7f) > 120) || ((gCalibrationData.data[2]&0x7f) > 120))
-	{
-		ALOGE("%s:calibration data error:gCalibrationData=0x%x,0x%x,0x%x\n",__func__, gCalibrationData.data[0] & 0x7f, gCalibrationData.data[1] & 0x7f, gCalibrationData.data[2] & 0x7f);
-		gAccelCaliData[0] = 0;
-		gAccelCaliData[1] = 0;
-		gAccelCaliData[2] = 0;
-	}
-	else
-	{
-		gAccelCaliData[0] = (gCalibrationData.data[0] & 0x80)?-(gCalibrationData.data[0]&0x7f):(gCalibrationData.data[0]&0x7f);
-		gAccelCaliData[1] = (gCalibrationData.data[1] & 0x80)?-(gCalibrationData.data[1]&0x7f):(gCalibrationData.data[1]&0x7f);
-		gAccelCaliData[2] = (gCalibrationData.data[2] & 0x80)?-(gCalibrationData.data[2]&0x7f):(gCalibrationData.data[2]&0x7f);
-
-		gAccelCaliData[0] = gAccelCaliData[0]*1000;
-		gAccelCaliData[1] = gAccelCaliData[1]*1000;
-		gAccelCaliData[2] = gAccelCaliData[2]*1000;
-
-	}
-
-	close(sCaliFd);
-	sCaliFd = -1;
-
-	ALOGD("%s:gAccelCaliData=%d,%d,%d\n",__func__, gAccelCaliData[0], gAccelCaliData[1], gAccelCaliData[2]);
-
-    return 0;
-}
-
-#endif
-
 /*****************************************************************************/
 
 struct sensors_poll_context_t {
@@ -150,8 +49,11 @@ struct sensors_poll_context_t {
     int pollEvents(sensors_event_t* data, int count);
     int batch(int handle, int flags, int64_t period_ns, int64_t timeout);
     int flush(int handle);
+    bool getInitialized() { return mInitialized; };
 
 private:
+    bool mInitialized;
+
     enum {
         light           = 0,
         proximity       = 1,
@@ -164,10 +66,9 @@ private:
         numFds,
     };
 
-    static const size_t wake = numFds - 1;
-    static const char WAKE_MESSAGE = 'W';
+    static const size_t flushPipe = numFds - 1;
     struct pollfd mPollFds[numFds];
-    int mWritePipeFd;
+    int mFlushWritePipeFd;
     SensorBase* mSensors[numSensorDrivers];
 
     int handleToDriver(int handle) const {
@@ -175,18 +76,17 @@ private:
             case ID_A:
                 return mma;
             case ID_M:
-			case ID_O:
                 return akm;	
             case ID_P:
                 return proximity;
             case ID_L:
                 return light;	
-			case ID_GY:
-				return gyro;
-			case ID_PR:
-				return pressure;
-			case ID_TMP:
-				return temperature;
+            case ID_GY:
+                return gyro;
+            case ID_PR:
+                return pressure;
+            case ID_TMP:
+                return temperature;
         }
         return -EINVAL;
     }
@@ -196,8 +96,10 @@ private:
 
 sensors_poll_context_t::sensors_poll_context_t()
 {
-	D("Entered.");
-	
+    mInitialized = false;
+    /* Must clean this up early or else the destructor will make a mess */
+    memset(mSensors, 0, sizeof(mSensors));
+
     mSensors[light] = new LightSensor();
     mPollFds[light].fd = mSensors[light]->getFd();
     mPollFds[light].events = POLLIN;
@@ -207,7 +109,6 @@ sensors_poll_context_t::sensors_poll_context_t()
     mPollFds[proximity].fd = mSensors[proximity]->getFd();
     mPollFds[proximity].events = POLLIN;
     mPollFds[proximity].revents = 0;
-	
 
     mSensors[mma] = new MmaSensor();
     mPollFds[mma].fd = mSensors[mma]->getFd();
@@ -219,58 +120,51 @@ sensors_poll_context_t::sensors_poll_context_t()
     mPollFds[akm].events = POLLIN;
     mPollFds[akm].revents = 0;
 
-	mSensors[gyro] = new GyroSensor();
+    mSensors[gyro] = new GyroSensor();
     mPollFds[gyro].fd = mSensors[gyro]->getFd();
     mPollFds[gyro].events = POLLIN;
     mPollFds[gyro].revents = 0;
 
-	mSensors[pressure] = new PressureSensor();
+    mSensors[pressure] = new PressureSensor();
     mPollFds[pressure].fd = mSensors[pressure]->getFd();
     mPollFds[pressure].events = POLLIN;
     mPollFds[pressure].revents = 0;
 
-	mSensors[temperature] = new TemperatureSensor();
+    mSensors[temperature] = new TemperatureSensor();
     mPollFds[temperature].fd = mSensors[temperature]->getFd();
     mPollFds[temperature].events = POLLIN;
     mPollFds[temperature].revents = 0;
 
-    int wakeFds[2];
-    int result = pipe(wakeFds);
-    LOGE_IF(result<0, "error creating wake pipe (%s)", strerror(errno));
-    fcntl(wakeFds[0], F_SETFL, O_NONBLOCK);
-    fcntl(wakeFds[1], F_SETFL, O_NONBLOCK);
-    mWritePipeFd = wakeFds[1];
+    int flushFds[2];
+    int result = pipe(flushFds);
+    LOGE_IF(result<0, "error creating flush pipe (%s)", strerror(errno));
+    result = fcntl(flushFds[0], F_SETFL, O_NONBLOCK);
+    LOGE_IF(result<0, "error setting flushFds[0] access mode (%s)", strerror(errno));
+    result = fcntl(flushFds[1], F_SETFL, O_NONBLOCK);
+    LOGE_IF(result<0, "error setting flushFds[1] access mode (%s)", strerror(errno));
+    mFlushWritePipeFd = flushFds[1];
 
-    mPollFds[wake].fd = wakeFds[0];
-    mPollFds[wake].events = POLLIN;
-    mPollFds[wake].revents = 0;
+    mPollFds[flushPipe].fd = flushFds[0];
+    mPollFds[flushPipe].events = POLLIN;
+    mPollFds[flushPipe].revents = 0;
 
+    mInitialized = true;
 }
 
 sensors_poll_context_t::~sensors_poll_context_t() {
     for (int i=0 ; i<numSensorDrivers ; i++) {
         delete mSensors[i];
     }
-    close(mPollFds[wake].fd);
-    close(mWritePipeFd);
+    close(mPollFds[flushPipe].fd);
+    close(mFlushWritePipeFd);
+    mInitialized = false;
 }
 
 int sensors_poll_context_t::activate(int handle, int enabled) {
+    if (!mInitialized) return -EINVAL;
     int index = handleToDriver(handle);
     if (index < 0) return index;
-#if defined(CALIBRATION_SUPPORT)
-	if((index == mma) && enabled)
-	{			
-		sensor_get_calibration_from_vendor1();
-	}
-#endif
-    int err =  mSensors[index]->enable(handle, enabled);
-    if (enabled && !err) {
-        const char wakeMessage(WAKE_MESSAGE);
-        int result = write(mWritePipeFd, &wakeMessage, 1);
-        LOGE_IF(result<0, "error sending wake message (%s)", strerror(errno));
-    }
-    return err;
+    return mSensors[index]->enable(handle, enabled);
 }
 
 int sensors_poll_context_t::setDelay(int handle, int64_t ns) {
@@ -280,86 +174,131 @@ int sensors_poll_context_t::setDelay(int handle, int64_t ns) {
     return mSensors[index]->setDelay(handle, ns);
 }
 
-static int sensor_flush[32] = {0};
+int sensors_poll_context_t::flush(int handle)
+{
+    int result;
+    sensors_event_t flush_event_data;
+
+    int index = handleToDriver(handle);
+    if (index < 0) return index;
+
+    result = mSensors[index]->isActivated(handle);
+    if (!result)
+        return -EINVAL;
+
+    flush_event_data.sensor = 0;
+    flush_event_data.timestamp = 0;
+    flush_event_data.meta_data.sensor = handle;
+    flush_event_data.meta_data.what = META_DATA_FLUSH_COMPLETE;
+    flush_event_data.type = SENSOR_TYPE_META_DATA;
+    flush_event_data.version = META_DATA_VERSION;
+
+    result = write(mFlushWritePipeFd, &flush_event_data, sizeof(sensors_event_t));
+    ALOGE_IF(result<0, "error sending flush event data (%s)", strerror(errno));
+
+    return (result >= 0 ? 0 : result);
+}
+
+static int64_t tm_min=0;
+static int64_t tm_max=0;
+static int64_t tm_sum=0;
+static int64_t tm_last_print=0;
+static int64_t tm_count=0;
+
+static int debug_time = 0;
+static int debug_lvl = 0;
+
+#define NSEC_PER_SEC            1000000000
+
+static inline int64_t timespec_to_ns(const struct timespec *ts)
+{
+	return ((int64_t) ts->tv_sec * NSEC_PER_SEC) + ts->tv_nsec;
+}
+
+static int64_t get_time_ns(void)
+{
+	struct timespec ts;
+	clock_gettime(CLOCK_MONOTONIC, &ts);
+	return timespec_to_ns(&ts);
+}
 
 int sensors_poll_context_t::pollEvents(sensors_event_t* data, int count)
 {
-	D("Entered : count = %d", count);
-    int i;
     int nbEvents = 0;
-    int n = 0;
+    int nb, polltime = -1;
 
-    do {
-        // see if we have some leftover from the last poll()
-        for (int i=0 ; count && i<numSensorDrivers ; i++) {
-            SensorBase* const sensor(mSensors[i]);
-            if ((mPollFds[i].revents & POLLIN) || (sensor->hasPendingEvents())) {
-                int nb = sensor->readEvents(data, count);	// num of evens received.
-				D("nb = %d.", nb);
-				#if defined(CALIBRATION_SUPPORT)
-				if(i == mma)
-				{
-					data->acceleration.x -= gAccelCaliData[0] * ACCELERATION_RATIO_ANDROID_TO_HW;
-					data->acceleration.y -= gAccelCaliData[1] * ACCELERATION_RATIO_ANDROID_TO_HW;
-					data->acceleration.z -= gAccelCaliData[2] * ACCELERATION_RATIO_ANDROID_TO_HW;
-				}
-				#endif
-                if (nb < count) {
-                    // no more data for this sensor
-                    mPollFds[i].revents = 0;
-                }
-                count -= nb;
-                nbEvents += nb;
-                data += nb;
-				D("count = %d, nbEvents = %d, data = 0x%p.", count, nbEvents, data);
-            }
-        }
+    // look for new events
+    nb = poll(mPollFds, numFds, polltime);
 
-        if (count) {
-            // we still have some room, so try to see if we can get
-            // some events immediately or just wait if we don't have
-            // anything to return
-            n = poll(mPollFds, numFds, nbEvents ? 0 : -1);
+    /* flush event data */
+    if ((count > 0) && (nb > 0)) {
+        if (mPollFds[flushPipe].revents & POLLIN) {
+            int n = read(mPollFds[flushPipe].fd, data, count * sizeof(sensors_event_t));
             if (n < 0) {
-                LOGE("poll() failed (%s)", strerror(errno));
-                //return -errno;
+                LOGE("error reading from flush pipe (%s)", strerror(errno));
+                return 0;
             }
-            if (n > 0) {
-                if (mPollFds[wake].revents & POLLIN) {
-                    char msg;
-                    int result = read(mPollFds[wake].fd, &msg, 1);
-                    LOGE_IF(result<0, "error reading from wake pipe (%s)", strerror(errno));
-                    LOGE_IF(msg != WAKE_MESSAGE, "unknown message on wake queue (0x%02x)", int(msg));
-                    mPollFds[wake].revents = 0;
+            nb = n / sizeof(sensors_event_t);
+            mPollFds[flushPipe].revents = 0;
+            count -= nb;
+            nbEvents += nb;
+            data += nb;
+            LOGI("report %d flush event\n", nbEvents);
+            return nbEvents;
+        }
+    }
+
+    if (nb > 0) {
+        for (int i=0 ; count && i < numSensorDrivers ; i++) {
+            SensorBase* const sensor(mSensors[i]);
+            if (mPollFds[i].revents & POLLIN) {
+                nb = 0;
+                nb = sensor->readEvents(data, count);
+                mPollFds[i].revents = 0;
+
+                //LOGI("count = %d, nbEvents = %d, nb = %d\n", count, nbEvents, nb);
+                if (nb > 0) {
+                    if (debug_time) {
+                        int64_t tm_cur = get_time_ns();
+                        int64_t tm_delta = tm_cur - data->timestamp;
+                        if (tm_min==0 && tm_max==0)
+                            tm_min = tm_max = tm_delta;
+                        else if (tm_delta < tm_min)
+                            tm_min = tm_delta;
+                        else if (tm_delta > tm_max)
+                            tm_max = tm_delta;
+                        tm_sum += tm_delta;
+                        tm_count++;
+                        //LOGI("tm_count = %d\n", tm_count);
+                        if ((tm_cur-tm_last_print) > 1000000000) {
+                            LOGD("ST HAL report rate[%4lld]: %8lld, %8lld, %8lld\n", tm_count, tm_min, (tm_sum/tm_count), tm_max);
+                            tm_last_print = tm_cur;
+                            tm_min = tm_max = tm_count = tm_sum = 0;
+                        }
+                    }
+    
+                    if (debug_lvl > 0) {
+                        for (int j=0; j<nb; j++) {
+                            if ((debug_lvl&1) && data[j].sensor==ID_GY) {
+                                LOGD("GYRO: %+f %+f %+f - %lld", data[j].gyro.x, data[j].gyro.y, data[j].gyro.z, data[j].timestamp);
+                            }
+                            if ((debug_lvl&2) && data[j].sensor==ID_A) {
+                                LOGD("ACCL: %+f %+f %+f - %lld", data[j].acceleration.x, data[j].acceleration.y, data[j].acceleration.z, data[j].timestamp);
+                            }
+                            if ((debug_lvl&4) && (data[j].sensor==ID_M)) {
+                                LOGD("MAG: %+f %+f %+f - %lld", data[j].magnetic.x, data[j].magnetic.y, data[j].magnetic.z, data[j].timestamp);
+                            }
+                        }
+                    }
+    
+                    count -= nb;
+                    nbEvents += nb;
+                    data += nb;
                 }
             }
         }
+    }
 
-        // if we have events and space, go read them
-		D("n =0x%x, count = 0x%x.", n, count);
-    } while (n>0 && count>0);
-
-#if 1
-        for (i=0; i<32; i++) {
-                if (sensor_flush[i] && count > 0) {
-                        sensors_event_t temp;
-                        temp.version = 0;
-                        temp.sensor = 0;
-                        temp.reserved0 = 0;
-                        temp.timestamp = 0LL;
-                        temp.type = SENSOR_TYPE_META_DATA;
-                        temp.meta_data.what = META_DATA_FLUSH_COMPLETE;
-                        temp.meta_data.sensor = i;
-                        *(data) = temp;
-			data++;
-                        nbEvents++;
-			count--;
-                        sensor_flush[i] = 0;
-                }
-        }
-#endif
-
-	D("to return : nbEvents = %d", nbEvents);
     return nbEvents;
 }
 
@@ -367,7 +306,6 @@ int sensors_poll_context_t::pollEvents(sensors_event_t* data, int count)
 
 static int poll__close(struct hw_device_t *dev)
 {
-	D("Entered.");
     sensors_poll_context_t *ctx = (sensors_poll_context_t *)dev;
     if (ctx) {
         delete ctx;
@@ -378,12 +316,18 @@ static int poll__close(struct hw_device_t *dev)
 static int poll__activate(struct sensors_poll_device_t *dev,
         int handle, int enabled) {
     sensors_poll_context_t *ctx = (sensors_poll_context_t *)dev;
+
+    LOGI("set active: handle = %d, enable = %d\n", handle, enabled);
+
     return ctx->activate(handle, enabled);
 }
 
 static int poll__setDelay(struct sensors_poll_device_t *dev,
         int handle, int64_t ns) {
     sensors_poll_context_t *ctx = (sensors_poll_context_t *)dev;
+
+    LOGI("set delay: handle = %d, delay = %dns\n", handle, ns);
+
     return ctx->setDelay(handle, ns);
 }
 
@@ -396,7 +340,7 @@ static int poll__poll(struct sensors_poll_device_t *dev,
 static int poll__batch(struct sensors_poll_device_1 *dev,
                       int handle, int flags, int64_t period_ns, int64_t timeout)
 {
-    LOGV("set batch: handle = %d, period_ns = %dns, timeout = %dns\n", handle, period_ns, timeout);
+    LOGI("set batch: handle = %d, period_ns = %dns, timeout = %dns\n", handle, period_ns, timeout);
 
     sensors_poll_context_t *ctx = (sensors_poll_context_t *)dev;
     return ctx->setDelay(handle, period_ns);
@@ -405,9 +349,9 @@ static int poll__batch(struct sensors_poll_device_1 *dev,
 static int poll__flush(struct sensors_poll_device_1 *dev,
                       int handle)
 {
-    LOGV("set flush: handle = %d\n", handle);
-    sensor_flush[handle] = 1;
-    return 0;
+    LOGI("set flush: handle = %d\n", handle);
+    sensors_poll_context_t *ctx = (sensors_poll_context_t *)dev;
+    return ctx->flush(handle);
 }
 
 /*****************************************************************************/
@@ -418,6 +362,10 @@ int init_nusensors(hw_module_t const* module, hw_device_t** device)
     int status = -EINVAL;
 
     sensors_poll_context_t *dev = new sensors_poll_context_t();
+    if (!dev->getInitialized()) {
+        LOGE("Failed to open the sensors");
+        return status;
+    }
     memset(&dev->device, 0, sizeof(sensors_poll_device_1));
 
     dev->device.common.tag = HARDWARE_DEVICE_TAG;
@@ -433,8 +381,6 @@ int init_nusensors(hw_module_t const* module, hw_device_t** device)
     dev->device.flush           = poll__flush;
 
     *device = &dev->device.common;
-
-    memset(sensor_flush, 0, 32*sizeof(int));
 
     status = 0;
     return status;

@@ -27,7 +27,6 @@
 #include "LightSensor.h"
 
 /*****************************************************************************/
-
 LightSensor::LightSensor()
     : SensorBase(LS_DEVICE_NAME, "lightsensor-level"),
       mEnabled(0),
@@ -39,38 +38,66 @@ LightSensor::LightSensor()
     mPendingEvent.type = SENSOR_TYPE_LIGHT;
     memset(mPendingEvent.data, 0, sizeof(mPendingEvent.data));
 
-     open_device();
+    open_device();
 
     int flags = 0;
-    if (!ioctl(dev_fd, LIGHTSENSOR_IOCTL_GET_ENABLED, &flags)) {
-        if (flags) {
-            mEnabled = 1;
-            setInitialState();
+    if (dev_fd > 0) {
+        if (!ioctl(dev_fd, LIGHTSENSOR_IOCTL_GET_ENABLED, &flags)) {
+            if (flags) {
+                mEnabled = 1;
+                setInitialState();
+            }
         }
-    }
-
-    if (!mEnabled) {
-        close_device();
     }
 }
 
 LightSensor::~LightSensor() {
+    if (mEnabled) {
+        enable(0, 0);
+    }
+    if (dev_fd > 0) {
+        close(dev_fd);
+        dev_fd = -1;
+    }
 }
 
 int LightSensor::setInitialState() {
     struct input_absinfo absinfo;
-    if (!ioctl(data_fd, EVIOCGABS(EVENT_TYPE_LIGHT), &absinfo)) {
+    if ((data_fd > 0) && (!ioctl(data_fd, EVIOCGABS(EVENT_TYPE_LIGHT), &absinfo))) {
         mPendingEvent.light = indexToValue(absinfo.value);
-        mHasPendingEvent = true;
+        if (mPendingEvent.light != mPreviousLight) {
+        	mHasPendingEvent = true;
+             mPreviousLight = mPendingEvent.light;
+        }
     }
     return 0;
+}
+
+int LightSensor::setDelay(int32_t /* handle */, int64_t ns)
+{
+    short ms;
+    int ret = -1;
+
+    ms = ns / 1000000;
+
+    if (dev_fd < 0) {
+        open_device();
+    }
+
+    ret = ioctl(dev_fd, LIGHTSENSOR_IOCTL_SET_RATE, &ms);
+    if (ret)
+        LOGE("LIGHTSENSOR_IOCTL_SET_RATE failed\n");
+
+    return ret;
 }
 
 int LightSensor::enable(int32_t, int en) {
     int flags = en ? 1 : 0;
     int err = 0;
+    mPreviousLight = -1;
+
     if (flags != mEnabled) {
-        if (!mEnabled) {
+        if (dev_fd < 0) {
             open_device();
         }
         err = ioctl(dev_fd, LIGHTSENSOR_IOCTL_ENABLE, &flags);
@@ -82,11 +109,13 @@ int LightSensor::enable(int32_t, int en) {
                 setInitialState();
             }
         }
-        if (!mEnabled) {
-            close_device();
-        }
     }
-    return err;
+    return 0;
+}
+
+int LightSensor::isActivated(int /* handle */)
+{
+    return mEnabled;
 }
 
 bool LightSensor::hasPendingEvents() const {
@@ -123,10 +152,11 @@ int LightSensor::readEvents(sensors_event_t* data, int count)
             }
         } else if (type == EV_SYN) {
             mPendingEvent.timestamp = getTimestamp();
-            if (mEnabled) {
+            if (mEnabled && (mPendingEvent.light != mPreviousLight)) {
                 *data++ = mPendingEvent;
                 count--;
                 numEventReceived++;
+                mPreviousLight = mPendingEvent.light;
             }
         } else {
             LOGE("LightSensor: unknown event (type=%d, code=%d)",

@@ -49,14 +49,14 @@ GyroSensor::GyroSensor()
     mPendingEvent.type = SENSOR_TYPE_GYROSCOPE;
     mPendingEvent.gyro.status = SENSOR_STATUS_ACCURACY_HIGH;
     memset(mPendingEvent.data, 0x00, sizeof(mPendingEvent.data));
-	int err = 0;
+
+    int err = 0;
     err = open_device();
-	err = err<0 ? -errno : 0;
-	if(err)
-	{
-		LOGD("%s:%s\n",__func__,strerror(-err));
-		return;
-	}
+    err = err<0 ? -errno : 0;
+    if (err) {
+        LOGD("%s:%s\n",__func__,strerror(-err));
+        return;
+    }
 	
     int flags = 0;
     if (!ioctl(dev_fd, L3G4200D_IOCTL_GET_ENABLE, &flags)) {
@@ -64,15 +64,15 @@ GyroSensor::GyroSensor()
             mEnabled = 1;
         }
     }
-
-    if (!mEnabled) {
-        close_device();
-    }
 }
 
 GyroSensor::~GyroSensor() {
-	if (mEnabled) {
+    if (mEnabled) {
         enable(0, 0);
+    }
+    if (dev_fd > 0) {
+        close(dev_fd);
+        dev_fd = -1;
     }
 }
 
@@ -81,6 +81,10 @@ int GyroSensor::setInitialState() {
     struct input_absinfo absinfo_y;
     struct input_absinfo absinfo_z;
     float value;
+
+    if (data_fd < 0)
+        return -1;
+
     if (!ioctl(data_fd, EVIOCGABS(EVENT_TYPE_GYRO_X), &absinfo_x) &&
         !ioctl(data_fd, EVIOCGABS(EVENT_TYPE_GYRO_X), &absinfo_y) &&
         !ioctl(data_fd, EVIOCGABS(EVENT_TYPE_GYRO_X), &absinfo_z)) {
@@ -92,16 +96,16 @@ int GyroSensor::setInitialState() {
         mPendingEvent.data[2] = value * CONVERT_GYRO_Z;
         mHasPendingEvent = true;
     }
+
     return 0;
 }
-
 
 int GyroSensor::enable(int32_t, int en)
 {
 	int flags = en ? 1 : 0;
 	int err = 0;
 	if (flags != mEnabled) {
-		if (!mEnabled) {
+		if (dev_fd < 0) {
 			open_device();
 		}
 		err = ioctl(dev_fd, L3G4200D_IOCTL_SET_ENABLE, &flags);
@@ -113,13 +117,9 @@ int GyroSensor::enable(int32_t, int en)
 				setInitialState();
 			}
 		}
-		if (!mEnabled) {
-			close_device();
-		}
 	}
 	return err;
 }
-
 
 bool GyroSensor::hasPendingEvents() const {
     return mHasPendingEvent;
@@ -130,11 +130,19 @@ int GyroSensor::setDelay(int32_t handle, int64_t ns)
     if (ns < 0)
         return -EINVAL;
 
+    if (dev_fd < 0)
+        open_device();
+
     int delay = ns / 1000000;
     if (ioctl(dev_fd, L3G4200D_IOCTL_SET_DELAY, &delay)) {
         return -errno;
     }
     return 0;
+}
+
+int GyroSensor::isActivated(int /* handle */)
+{
+    return mEnabled;
 }
 
 int GyroSensor::readEvents(sensors_event_t* data, int count)

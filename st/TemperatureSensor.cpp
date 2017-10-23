@@ -43,25 +43,26 @@ TemperatureSensor::TemperatureSensor()
      open_device();
 
     int flags = 0;
-    if (!ioctl(dev_fd, TEMPERATURE_IOCTL_GET_ENABLED, &flags)) {
+    if ((dev_fd > 0) && (!ioctl(dev_fd, TEMPERATURE_IOCTL_GET_ENABLED, &flags))) {
         if (flags) {
             mEnabled = 1;
             setInitialState();
         }
     }
-
-    if (!mEnabled) {
-        close_device();
-    }
 }
 
 TemperatureSensor::~TemperatureSensor() {
+    if (dev_fd > 0) {
+        close(dev_fd);
+        dev_fd = -1;
+    }
 }
 
 int TemperatureSensor::setInitialState() {
     struct input_absinfo absinfo;
-    if (!ioctl(data_fd, EVIOCGABS(EVENT_TYPE_TEMPERATURE), &absinfo)) {
+    if ((data_fd > 0) && !ioctl(data_fd, EVIOCGABS(EVENT_TYPE_TEMPERATURE), &absinfo)) {
         mHasPendingEvent = true;
+        mPendingEvent.temperature = CONVERT_B * absinfo.value;
     }
     return 0;
 }
@@ -70,7 +71,7 @@ int TemperatureSensor::enable(int32_t, int en) {
     int flags = en ? 1 : 0;
     int err = 0;
     if (flags != mEnabled) {
-        if (!mEnabled) {
+        if (dev_fd < 0) {
             open_device();
         }
         err = ioctl(dev_fd, TEMPERATURE_IOCTL_ENABLE, &flags);
@@ -81,9 +82,6 @@ int TemperatureSensor::enable(int32_t, int en) {
             if (en) {
                 setInitialState();
             }
-        }
-        if (!mEnabled) {
-            close_device();
         }
     }
     return err;
@@ -98,6 +96,10 @@ int TemperatureSensor::setDelay(int32_t handle, int64_t ns)
 {
     if (ns < 0)
         return -EINVAL;
+	
+    if (dev_fd < 0) {
+        open_device();
+    }
 
     int delay = ns / 1000000;
     if (ioctl(dev_fd, TEMPERATURE_IOCTL_SET_DELAY, &delay)) {
@@ -106,12 +108,17 @@ int TemperatureSensor::setDelay(int32_t handle, int64_t ns)
     return 0;
 }
 
+int TemperatureSensor::isActivated(int /* handle */)
+{
+    return mEnabled;
+}
+
 int TemperatureSensor::readEvents(sensors_event_t* data, int count)
 {
     if (count < 1)
         return -EINVAL;
 
-	 if (mHasPendingEvent) {
+    if (mHasPendingEvent) {
         mHasPendingEvent = false;
         mPendingEvent.timestamp = getTimestamp();
         *data = mPendingEvent;

@@ -48,12 +48,12 @@ AkmSensor::AkmSensor()
     mPendingEvents[MagneticField].sensor = ID_M;
     mPendingEvents[MagneticField].type = SENSOR_TYPE_MAGNETIC_FIELD;
     mPendingEvents[MagneticField].magnetic.status = SENSOR_STATUS_ACCURACY_HIGH;
-
+/*
     mPendingEvents[Orientation  ].version = sizeof(sensors_event_t);
     mPendingEvents[Orientation  ].sensor = ID_O;
     mPendingEvents[Orientation  ].type = SENSOR_TYPE_ORIENTATION;
     mPendingEvents[Orientation  ].orientation.status = SENSOR_STATUS_ACCURACY_HIGH;
-
+*/
     for (int i=0 ; i<numSensors ; i++)
         mDelays[i] = 200000000; // 200 ms by default
 
@@ -78,7 +78,7 @@ AkmSensor::AkmSensor()
         }
     }
 */	
-    if (!ioctl(dev_fd, ECS_IOCTL_APP_GET_MVFLAG, &flags)) {
+    if ((dev_fd > 0) && (!ioctl(dev_fd, ECS_IOCTL_APP_GET_MVFLAG, &flags))) {
         if (flags)  {
             mEnabled |= 1<<MagneticField;
             if (!ioctl(data_fd, EVIOCGABS(EVENT_TYPE_MAGV_X), &absinfo)) {
@@ -92,6 +92,7 @@ AkmSensor::AkmSensor()
             }
         }
     }
+/*
     if (!ioctl(dev_fd, ECS_IOCTL_APP_GET_MFLAG, &flags)) {
         if (flags)  {
             mEnabled |= 1<<Orientation;
@@ -109,27 +110,27 @@ AkmSensor::AkmSensor()
             }
         }
     }
-
+*/
     // disable temperature sensor, since it is not reported
     flags = 0;
-    ioctl(dev_fd, ECS_IOCTL_APP_SET_TFLAG, &flags);
-
-    if (!mEnabled) {
-        close_device();
-    }
+    if (dev_fd > 0)
+        ioctl(dev_fd, ECS_IOCTL_APP_SET_TFLAG, &flags);
 }
 
 AkmSensor::~AkmSensor() {
+    if (dev_fd > 0) {
+        close(dev_fd);
+        dev_fd = -1;
+    }
 }
 
 int AkmSensor::enable(int32_t handle, int en)
 {
-	D("Entered : handle = 0x%x, en = 0x%x.", handle, en);
     int what = -1;
     switch (handle) {
         //case ID_A: what = Accelerometer; break;
         case ID_M: what = MagneticField; break;
-        case ID_O: what = Orientation;   break;
+        //case ID_O: what = Orientation;   break;
     }
 
     if (uint32_t(what) >= numSensors)
@@ -138,16 +139,15 @@ int AkmSensor::enable(int32_t handle, int en)
     int newState  = en ? 1 : 0;
     int err = 0;
 
-	I("newState = 0x%x, what = 0x%x, mEnabled = 0x%x.", newState, what, mEnabled);
     if ((uint32_t(newState)<<what) != (mEnabled & (1<<what))) {
-        if (!mEnabled) {
+        if (dev_fd < 0) {
             open_device();
         }
         int cmd;
         switch (what) {
             //case Accelerometer: cmd = ECS_IOCTL_APP_SET_AFLAG;  break;
             case MagneticField: cmd = ECS_IOCTL_APP_SET_MVFLAG; break;
-            case Orientation:   cmd = ECS_IOCTL_APP_SET_MFLAG;  break;
+            //case Orientation:   cmd = ECS_IOCTL_APP_SET_MFLAG;  break;
         }
         short flags = newState;
         err = ioctl(dev_fd, cmd, &flags);
@@ -156,25 +156,21 @@ int AkmSensor::enable(int32_t handle, int en)
         if (!err) {
             mEnabled &= ~(1<<what);
             mEnabled |= (uint32_t(flags)<<what);
-            update_delay();
+            //update_delay();
         }
-		if ( !mEnabled ) {
-    		close_device();
-		}
    	}
-	D("to exit : mEnabled = 0x%x.", mEnabled);
+
 	return err;
 }
 
 int AkmSensor::setDelay(int32_t handle, int64_t ns)
 {
-	D("Entered : handle = 0x%x, ns = %lld.", handle, ns);
 #ifdef ECS_IOCTL_APP_SET_DELAY
     int what = -1;
     switch (handle) {
         //case ID_A: what = Accelerometer; break;
         case ID_M: what = MagneticField; break;
-        case ID_O: what = Orientation;   break;
+       // case ID_O: what = Orientation;   break;
     }
 
     if (uint32_t(what) >= numSensors)
@@ -192,28 +188,40 @@ int AkmSensor::setDelay(int32_t handle, int64_t ns)
 
 int AkmSensor::update_delay()
 {
-	D("Entered.");
     int result = 0;
 
-    if (mEnabled) {
-        uint64_t wanted = -1LLU;
-        for (int i=0 ; i<numSensors ; i++) {
-            if (mEnabled & (1<<i)) {
-                uint64_t ns = mDelays[i];       /* 预期的 delay 设定. */
-                wanted = wanted < ns ? wanted : ns;
-            }
-        }
-        short delay = int64_t(wanted) / 1000000;
-        if (ioctl(dev_fd, ECS_IOCTL_APP_SET_DELAY, &delay)) {
-            return -errno;
+    if (dev_fd < 0) {
+        open_device();
+    }
+
+    uint64_t wanted = -1LLU;
+    for (int i=0 ; i<numSensors ; i++) {
+        if (mEnabled & (1<<i)) {
+            uint64_t ns = mDelays[i];       /* 预期的 delay 设定. */
+            wanted = wanted < ns ? wanted : ns;
         }
     }
+    short delay = int64_t(wanted) / 1000000;
+    if (ioctl(dev_fd, ECS_IOCTL_APP_SET_DELAY, &delay)) {
+        return -errno;
+    }
+
     return result;
+}
+
+int AkmSensor::isActivated(int  handle)
+{
+     int what = -1;
+    switch (handle) {
+        //case ID_A: what = Accelerometer; break;
+        case ID_M: what = MagneticField; break;
+       // case ID_O: what = Orientation;   break;
+    }
+    return (mEnabled & (1<<what));
 }
 
 int AkmSensor::readEvents(sensors_event_t* data, int count)
 {
-	D("Entered : count = %d.", count);
     if (count < 1)
         return -EINVAL;
 
@@ -226,20 +234,15 @@ int AkmSensor::readEvents(sensors_event_t* data, int count)
 
     while (count && mInputReader.readEvent(&event)) {
         int type = event->type;
-        D("count = 0x%x, type = 0x%x.", count, type);
         if (type == EV_ABS) {           // #define EV_ABS 0x03
             processEvent(event->code, event->value);
             mInputReader.next();
         } else if (type == EV_SYN) {    // #define EV_SYN 0x00
             for (int j=0 ; count && mPendingMask && j<numSensors ; j++) {
-                D("mPendingMask = 0x%x, j = %d; (mPendingMask & (1<<j)) = 0x%x", mPendingMask, j, (mPendingMask & (1<<j)) );
                 if (mPendingMask & (1<<j)) {
                     mPendingMask &= ~(1<<j);
                     mPendingEvents[j].timestamp = getTimestamp();
-                    D( "mEnabled = 0x%x, j = %d; mEnabled & (1<<j) = 0x%x.", mEnabled, j, (mEnabled & (1 << j) ) );
                     if (mEnabled & (1<<j)) {
-                        D("hxw mPendingEvents[j].timestamp:%ld\n",mPendingEvents[j].timestamp);
-                        D("hxw mPretimestamp:%ld\n",mPretimestamp);
 #ifdef INSERT_FAKE_DATA
                         if(mPretimestamp == 0)mPretimestamp = mPendingEvents[j].timestamp;
                         int tmstamp_ms =  nanoseconds_to_milliseconds(mPendingEvents[j].timestamp - mPretimestamp);
@@ -292,7 +295,6 @@ void AkmSensor::instertFakeData(int num){
 
 void AkmSensor::processEvent(int code, int value)
 {
-	D("Entered : code = 0x%x, value = 0x%x.", code, value);
     switch (code) {
 /*
         case EVENT_TYPE_ACCEL_X:
@@ -324,7 +326,7 @@ void AkmSensor::processEvent(int code, int value)
             mPendingMask |= 1<<MagneticField;
             mPendingEvents[MagneticField].magnetic.status = value;
             break;
-
+/*
         case EVENT_TYPE_YAW:
             mPendingMask |= 1<<Orientation;
             mPendingEvents[Orientation].orientation.azimuth = value * CONVERT_O_A;
@@ -342,5 +344,6 @@ void AkmSensor::processEvent(int code, int value)
             mPendingEvents[Orientation].orientation.status =
                     uint8_t(value & SENSOR_STATE_MASK);
             break;
+*/
     }
 }

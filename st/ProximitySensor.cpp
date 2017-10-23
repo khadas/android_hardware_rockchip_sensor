@@ -42,23 +42,26 @@ ProximitySensor::ProximitySensor()
     open_device();
 
     int flags = 0;
-    if (!ioctl(dev_fd, PSENSOR_IOCTL_GET_ENABLED, &flags)) {
-        mEnabled = 1;
-        if (flags) {
-            setInitialState();
+    if (dev_fd > 0) {
+        if (!ioctl(dev_fd, PSENSOR_IOCTL_GET_ENABLED, &flags)) {
+            if (flags) {
+                mEnabled = 1;
+                setInitialState();
+            }
         }
-    }
-    if (!mEnabled) {
-        close_device();
     }
 }
 
 ProximitySensor::~ProximitySensor() {
+    if (dev_fd > 0) {
+        close(dev_fd);
+        dev_fd = -1;
+    }
 }
 
 int ProximitySensor::setInitialState() {
     struct input_absinfo absinfo;
-    if (!ioctl(data_fd, EVIOCGABS(EVENT_TYPE_PROXIMITY), &absinfo)) {
+    if ((data_fd > 0) && (!ioctl(data_fd, EVIOCGABS(EVENT_TYPE_PROXIMITY), &absinfo))) {
         // make sure to report an event immediately
         mHasPendingEvent = true;
         mPendingEvent.distance = indexToValue(absinfo.value);
@@ -70,7 +73,7 @@ int ProximitySensor::enable(int32_t, int en) {
     int newState = en ? 1 : 0;
     int err = 0;
     if (newState != mEnabled) {
-        if (!mEnabled) {
+        if (dev_fd < 0) {
             open_device();
         }
         int flags = newState;
@@ -83,15 +86,17 @@ int ProximitySensor::enable(int32_t, int en) {
                 setInitialState();
             }
         }
-        if (!mEnabled) {
-            close_device();
-        }
     }
     return err;
 }
 
 bool ProximitySensor::hasPendingEvents() const {
     return mHasPendingEvent;
+}
+
+int ProximitySensor::isActivated(int /* handle */)
+{
+    return mEnabled;
 }
 
 int ProximitySensor::readEvents(sensors_event_t* data, int count)

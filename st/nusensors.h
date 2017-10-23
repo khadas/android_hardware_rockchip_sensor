@@ -39,9 +39,10 @@ sensor hal  v1.2 add akm8963 support 2013-3-10
 sensor hal  v1.3 modify akm device name from akmd8975 to akmd 2013-3-14
 sensor hal  v1.4 add akm09911 support 2013-3-21
 sensor hal  v1.5 add angle calculation and calibration of gsensor support 2013-9-1
+sensor hal  v1.6 upagrde sensors device api version to SENSORS_DEVICE_API_VERSION_1_3 
 */
 
-#define SENSOR_VERSION_AND_TIME  "sensor hal  v1.5 add angle calculation and calibration of gsensor support 2013-9-1"
+#define SENSOR_VERSION_AND_TIME  "sensor hal  v1.6 upagrde sensors device api version to SENSORS_DEVICE_API_VERSION_1_3"
 
 
 #ifndef M_PI
@@ -123,7 +124,7 @@ int init_nusensors(hw_module_t const* module, hw_device_t** device);
 
 
 /** 表征相同的 加速度物理量的时候, Android 上层使用的 数值 和 sensor 数据设备送出的 数值 的 比值. */
-#define ACCELERATION_RATIO_ANDROID_TO_HW        (9.80665f / 1000000)
+#define ACCELERATION_RATIO_ANDROID_TO_HW        (9.80665f / 16384)   //16bit sensor数据，量程为+-2G时候的比例
 
 /*-------------------------------------------------------*/
 // 720 LSG = 1G

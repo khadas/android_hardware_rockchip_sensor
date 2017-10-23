@@ -43,13 +43,14 @@ public:
         //Orientation     = 2,
 	
 		MagneticField	= 0,
-		Orientation 	= 1,
+	//	Orientation 	= 1,
         numSensors
     };
 
     virtual int setDelay(int32_t handle, int64_t ns);
     virtual int enable(int32_t handle, int enabled);
     virtual int readEvents(sensors_event_t* data, int count);
+    virtual int isActivated(int handle);
     void processEvent(int code, int value);
     void instertFakeData(int num) ;
 

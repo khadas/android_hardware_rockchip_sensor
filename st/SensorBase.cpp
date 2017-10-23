@@ -44,21 +44,21 @@ SensorBase::SensorBase(
 SensorBase::~SensorBase() {
     if (data_fd >= 0) {
         close(data_fd);
+        data_fd = -1;
     }
     if (dev_fd >= 0) {
         close(dev_fd);
+        dev_fd = -1;
     }
 }
 
 int SensorBase::open_device() {
     if (dev_fd<0 && dev_name) {
         dev_fd = open(dev_name, O_RDONLY);
-        if(dev_fd<0)
-        {
-			LOGD("Couldn't open %s (%s)", dev_name, strerror(errno));
-			return -errno;
-        }
-        
+        if (dev_fd<0) {
+            LOGD("Couldn't open %s (%s)", dev_name, strerror(errno));
+            return -errno;
+        }        
     }
     return 0;
 }
@@ -194,4 +194,14 @@ int SensorBase::openInput(const char* inputName) {
     closedir(dir);
     LOGE_IF(fd<0, "couldn't find '%s' input device", inputName);
     return fd;
+}
+
+int SensorBase::enable(int32_t /* handle */, int /* enabled */)
+{
+    return 0;
+}
+
+int SensorBase::isActivated(int /* handle */)
+{
+    return 0;
 }

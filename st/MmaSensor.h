@@ -36,26 +36,21 @@ public:
             MmaSensor();
     virtual ~MmaSensor();
 
-    enum {
-        Accelerometer   = 0,
-        numSensors
-    };
-
     virtual int setDelay(int32_t handle, int64_t ns);
     virtual int enable(int32_t handle, int enabled);
+    virtual int isActivated(int handle);
     virtual int readEvents(sensors_event_t* data, int count);
-    void instertFakeData(int num) ;
     void processEvent(int code, int value);
 
 private:
     int update_delay();
+    void readCalibration();
     uint32_t mEnabled;
     uint32_t mPendingMask;
     InputEventCircularReader mInputReader;
-    sensors_event_t mPendingEvents[numSensors];
-    sensors_event_t mAccelInsertingEvents[INSERT_FAKE_MAX];
-    int64_t mPretimestamp;
-    uint64_t mDelays[numSensors];
+    sensors_event_t mPendingEvents;
+    int64_t mDelays;
+    int accel_offset[3];
 };
 
 /*****************************************************************************/

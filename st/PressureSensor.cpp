@@ -43,25 +43,26 @@ PressureSensor::PressureSensor()
      open_device();
 
     int flags = 0;
-    if (!ioctl(dev_fd, PRESSURE_IOCTL_GET_ENABLED, &flags)) {
+    if ((dev_fd > 0) && (!ioctl(dev_fd, PRESSURE_IOCTL_GET_ENABLED, &flags))) {
         if (flags) {
             mEnabled = 1;
             setInitialState();
         }
     }
-
-    if (!mEnabled) {
-        close_device();
-    }
 }
 
 PressureSensor::~PressureSensor() {
+    if (dev_fd > 0) {
+        close(dev_fd);
+        dev_fd = -1;
+    }
 }
 
 int PressureSensor::setInitialState() {
     struct input_absinfo absinfo;
-    if (!ioctl(data_fd, EVIOCGABS(EVENT_TYPE_PRESSURE), &absinfo)) {
+    if ((data_fd > 0) && (!ioctl(data_fd, EVIOCGABS(EVENT_TYPE_PRESSURE), &absinfo))) {
         mHasPendingEvent = true;
+        mPendingEvent.pressure = absinfo.value * CONVERT_B;		
     }
     return 0;
 }
@@ -70,7 +71,7 @@ int PressureSensor::enable(int32_t, int en) {
     int flags = en ? 1 : 0;
     int err = 0;
     if (flags != mEnabled) {
-        if (!mEnabled) {
+        if (dev_fd < 0) {
             open_device();
         }
         err = ioctl(dev_fd, PRESSURE_IOCTL_ENABLE, &flags);
@@ -82,9 +83,6 @@ int PressureSensor::enable(int32_t, int en) {
                 setInitialState();
             }
         }
-        if (!mEnabled) {
-            close_device();
-        }
     }
     return err;
 }
@@ -93,17 +91,24 @@ bool PressureSensor::hasPendingEvents() const {
     return mHasPendingEvent;
 }
 
-
 int PressureSensor::setDelay(int32_t handle, int64_t ns)
 {
     if (ns < 0)
         return -EINVAL;
+
+    if (dev_fd < 0)
+        open_device();
 
     int delay = ns / 1000000;
     if (ioctl(dev_fd, PRESSURE_IOCTL_SET_DELAY, &delay)) {
         return -errno;
     }
     return 0;
+}
+
+int PressureSensor::isActivated(int /* handle */)
+{
+    return mEnabled;
 }
 
 int PressureSensor::readEvents(sensors_event_t* data, int count)
