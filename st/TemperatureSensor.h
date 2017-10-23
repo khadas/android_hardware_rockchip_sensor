@@ -49,6 +49,7 @@ public:
     virtual int enable(int32_t handle, int enabled);
     virtual int readEvents(sensors_event_t* data, int count);   
     virtual bool hasPendingEvents() const;
+    virtual int isActivated(int handle);
     void processEvent(int code, int value);
 };
 

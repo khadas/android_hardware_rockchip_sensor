@@ -41,8 +41,6 @@ protected:
 
     static int openInput(const char* inputName);
     static int64_t getTimestamp();
-
-
     static int64_t timevalToNano(timeval const& t) {
         return t.tv_sec*1000000000LL + t.tv_usec*1000;
     }
@@ -62,6 +60,7 @@ public:
     virtual int getFd() const;
     virtual int setDelay(int32_t handle, int64_t ns);
     virtual int enable(int32_t handle, int enabled) = 0;
+    virtual int isActivated(int handle);
 };
 
 /*****************************************************************************/

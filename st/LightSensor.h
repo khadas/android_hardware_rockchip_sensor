@@ -36,6 +36,7 @@ class LightSensor : public SensorBase {
     sensors_event_t mPendingEvent;
     bool mHasPendingEvent;
 
+    float mPreviousLight;
     float indexToValue(size_t index) const;
     int setInitialState();
 
@@ -44,9 +45,10 @@ public:
     virtual ~LightSensor();
     virtual int readEvents(sensors_event_t* data, int count);
     virtual bool hasPendingEvents() const;
+    virtual int setDelay(int32_t handle, int64_t ns);
     virtual int enable(int32_t handle, int enabled);
+    virtual int isActivated(int handle);
 };
-
 /*****************************************************************************/
 
 #endif  // ANDROID_LIGHT_SENSOR_H
