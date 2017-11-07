@@ -112,15 +112,18 @@ private:
     enum {
         mpl = 0,
         compass,
+#if 0
         dmpOrient,
         dmpSign,
+#endif
         light,
         proximity,
         numSensorDrivers,   // wake pipe goes here
         numFds,
     };
-
-    struct pollfd mPollFds[numSensorDrivers];
+    static const size_t flushPipe = numFds - 1;
+    struct pollfd mPollFds[numFds];
+    int mFlushWritePipeFd;
     SensorBase *mSensor;
     CompassSensor *mCompassSensor;
     LightSensor *mLightSensor;
@@ -163,10 +166,10 @@ sensors_poll_context_t::sensors_poll_context_t() {
 
         sSensorList[LOCAL_SENSORS-2].fifoReservedEventCount   = 0;
         sSensorList[LOCAL_SENSORS-2].fifoMaxEventCount   = 0;
-        sSensorList[LOCAL_SENSORS-2].stringType = 0;
+        sSensorList[LOCAL_SENSORS-2].stringType = SENSOR_STRING_TYPE_LIGHT;
         sSensorList[LOCAL_SENSORS-2].requiredPermission = 0;
         sSensorList[LOCAL_SENSORS-2].maxDelay = 200000;
-        sSensorList[LOCAL_SENSORS-2].flags = SENSOR_FLAG_CONTINUOUS_MODE;
+        sSensorList[LOCAL_SENSORS-2].flags = SENSOR_FLAG_ON_CHANGE_MODE;
     sensors += 1;
 
 	memset(&sSensorList[LOCAL_SENSORS-1], 0, sizeof(sSensorList[0]));
@@ -181,10 +184,10 @@ sensors_poll_context_t::sensors_poll_context_t() {
 
         sSensorList[LOCAL_SENSORS-1].fifoReservedEventCount   = 0;
         sSensorList[LOCAL_SENSORS-1].fifoMaxEventCount   = 0;
-        sSensorList[LOCAL_SENSORS-1].stringType = 0;
+        sSensorList[LOCAL_SENSORS-1].stringType = SENSOR_STRING_TYPE_PROXIMITY;
         sSensorList[LOCAL_SENSORS-1].requiredPermission = 0;
         sSensorList[LOCAL_SENSORS-1].maxDelay = 200000;
-        sSensorList[LOCAL_SENSORS-1].flags = SENSOR_FLAG_CONTINUOUS_MODE;
+        sSensorList[LOCAL_SENSORS-1].flags = SENSOR_FLAG_ON_CHANGE_MODE | SENSOR_FLAG_WAKE_UP;
 	sensors += 1;
 
     mSensor = mplSensor;
@@ -203,7 +206,7 @@ sensors_poll_context_t::sensors_poll_context_t() {
     mPollFds[compass].events = POLLIN;
     mPollFds[compass].revents = 0;
 #endif
-
+#if 0
     mPollFds[dmpOrient].fd = ((MPLSensor*) mSensor)->getDmpOrientFd();
     mPollFds[dmpOrient].events = POLLPRI;
     mPollFds[dmpOrient].revents = 0;
@@ -211,7 +214,7 @@ sensors_poll_context_t::sensors_poll_context_t() {
     mPollFds[dmpSign].fd = ((MPLSensor*) mSensor)->getDmpSignificantMotionFd();
     mPollFds[dmpSign].events = POLLPRI;
     mPollFds[dmpSign].revents = 0;
-
+#endif
     mPollFds[light].fd = mLightSensor->getFd();
     mPollFds[light].events = POLLIN;
     mPollFds[light].revents = 0;
@@ -219,6 +222,19 @@ sensors_poll_context_t::sensors_poll_context_t() {
     mPollFds[proximity].fd = mProximitySensor->getFd();
     mPollFds[proximity].events = POLLIN;
     mPollFds[proximity].revents = 0;
+
+    int flushFds[2];
+    int result = pipe(flushFds);
+    LOGE_IF(result<0, "error creating flush pipe (%s)", strerror(errno));
+    result = fcntl(flushFds[0], F_SETFL, O_NONBLOCK);
+    LOGE_IF(result<0, "error setting flushFds[0] access mode (%s)", strerror(errno));
+    result = fcntl(flushFds[1], F_SETFL, O_NONBLOCK);
+    LOGE_IF(result<0, "error setting flushFds[1] access mode (%s)", strerror(errno));
+    mFlushWritePipeFd = flushFds[1];
+
+    mPollFds[flushPipe].fd = flushFds[0];
+    mPollFds[flushPipe].events = POLLIN;
+    mPollFds[flushPipe].revents = 0;
 
 	/*Init sSensorListCTS added by hxw*/
 	memset(sSensorListCTS,0,sizeof(sSensorListCTS));
@@ -253,6 +269,8 @@ sensors_poll_context_t::~sensors_poll_context_t() {
     delete mCompassSensor;
     delete mLightSensor;	
     delete mProximitySensor;
+    close(mPollFds[flushPipe].fd);
+    close(mFlushWritePipeFd);
 }
 
 int sensors_poll_context_t::activate(int handle, int enabled) {
@@ -272,6 +290,24 @@ int sensors_poll_context_t::setDelay(int handle, int64_t ns)
 		return mProximitySensor->setDelay(handle, ns);
 	}
     return mSensor->setDelay(handle, ns);
+}
+
+int sensors_poll_context_t::flush(int handle)
+{
+    int result;
+    sensors_event_t flush_event_data;
+
+    flush_event_data.sensor = 0;
+    flush_event_data.timestamp = 0;
+    flush_event_data.meta_data.sensor = handle;
+    flush_event_data.meta_data.what = META_DATA_FLUSH_COMPLETE;
+    flush_event_data.type = SENSOR_TYPE_META_DATA;
+    flush_event_data.version = META_DATA_VERSION;
+
+    result = write(mFlushWritePipeFd, &flush_event_data, sizeof(sensors_event_t));
+    ALOGE_IF(result<0, "error sending flush event data (%s)", strerror(errno));
+
+    return (result >= 0 ? 0 : result);
 }
 
 #define NSEC_PER_SEC            1000000000
@@ -296,7 +332,7 @@ static int64_t tm_sum=0;
 static int64_t tm_last_print=0;
 static int64_t tm_count=0;
 
-#define SENSOR_KEEP_ALIVE       1
+#define SENSOR_KEEP_ALIVE       0
 
 #if SENSOR_KEEP_ALIVE
 static int sensor_activate[32];
@@ -314,11 +350,8 @@ static int64_t sensor_prev_time[32];
 static int debug_lvl = 0;
 
 /* print sensor data latency */
-static int debug_time = 0;
+static int debug_time = 1;
 #include <cutils/properties.h>
-
-/* for sensor flush */
-static int sensor_flush[32];
 
 int sensors_poll_context_t::pollEvents(sensors_event_t *data, int count)
 {
@@ -329,10 +362,28 @@ int sensors_poll_context_t::pollEvents(sensors_event_t *data, int count)
     int i=0;
 
     // look for new events
-    nb = poll(mPollFds, numSensorDrivers, polltime);
+    nb = poll(mPollFds, numFds, polltime);
+
+    /* flush event data */
+    if ((count > 0) && (nb > 0)) {
+        if (mPollFds[flushPipe].revents & POLLIN) {
+            int n = read(mPollFds[flushPipe].fd, data, count * sizeof(sensors_event_t));
+            if (0 > n) {
+                ALOGE("error reading from flush pipe (%s)", strerror(errno));
+                return -errno;
+            }
+            nb = n/sizeof(sensors_event_t);
+            mPollFds[flushPipe].revents = 0;
+            count -= nb;
+            nbEvents += nb;
+            data += nb;
+            LOGI("report %d flush event\n", nbEvents);
+            return nbEvents;
+        }
+    }
 
     if (nb > 0) {
-        for (int i = 0; count && i < numSensorDrivers; i++) {
+        for (i = 0; count && i < numSensorDrivers; i++) {
             if (mPollFds[i].revents & (POLLIN | POLLPRI)) {
                 nb = 0;
                 if (i == mpl) {
@@ -341,7 +392,9 @@ int sensors_poll_context_t::pollEvents(sensors_event_t *data, int count)
                 } else if (i == compass) {
                     ((MPLSensor*) mSensor)->buildCompassEvent();
                     mPollFds[i].revents = 0;
+#if 0
                 } else if (i == dmpOrient) {
+			LOGI("readDmpOrientEvents\n");
                     nb = ((MPLSensor*) mSensor)->readDmpOrientEvents(data, count);
                     mPollFds[dmpOrient].revents= 0;
                     if (isDmpScreenAutoRotationEnabled() && nb > 0) {
@@ -350,12 +403,13 @@ int sensors_poll_context_t::pollEvents(sensors_event_t *data, int count)
                         data += nb;
                     }
                 } else if (i == dmpSign) {
-                    LOGI_IF(0, "HAL: dmpSign interrupt");
+                    LOGI_IF(1, "HAL: dmpSign interrupt");
                     nb = ((MPLSensor*) mSensor)->readDmpSignificantMotionEvents(data, count);
                     mPollFds[i].revents = 0;
                     count -= nb;
                     nbEvents += nb;
                     data += nb; 
+#endif
                 } else if (i == light) {
                     nb = mLightSensor->readEvents(data, count);
                     mPollFds[i].revents = 0;
@@ -385,7 +439,7 @@ int sensors_poll_context_t::pollEvents(sensors_event_t *data, int count)
             }
         }
 #endif
-
+#if 0
         int gyro_i = -1;
         int accel_i = -1;
         for (i=0; i<nb; i++) {
@@ -397,7 +451,7 @@ int sensors_poll_context_t::pollEvents(sensors_event_t *data, int count)
         if (gyro_i>=0 && accel_i>=0) {
 			rkvr_add_sensor_data2(data[accel_i].acceleration.v, data[gyro_i].gyro.v, data[gyro_i].timestamp);
         }
-
+#endif
         if (debug_lvl > 0) {
             for (i=0; i<nb; i++) {
                 if ((debug_lvl&1) && data[i].sensor==SENSORS_RAW_GYROSCOPE_HANDLE) {
@@ -450,36 +504,9 @@ int sensors_poll_context_t::pollEvents(sensors_event_t *data, int count)
             nbEvents += nb;
             data += nb;
         }
-
-#if 1
-        for (i=0; i<32; i++) {
-                if (sensor_flush[i] && count > 0) {
-                        sensors_event_t temp;
-                        temp.version = 0;
-                        temp.sensor = 0;
-                        temp.reserved0 = 0;
-                        temp.timestamp = 0LL;
-                        temp.type = SENSOR_TYPE_META_DATA;
-                        temp.meta_data.what = META_DATA_FLUSH_COMPLETE;
-                        temp.meta_data.sensor = i;
-                        *data = temp;
-                        nbEvents++;
-			data++;
-			count--;
-                        sensor_flush[i] = 0;
-                }
-        }
-#endif
-
     }
 
     return nbEvents;
-}
-
-int sensors_poll_context_t::batch(int handle, int flags, int64_t period_ns, int64_t timeout)
-{
-    FUNC_LOG;
-    return mSensor->batch(handle, flags, period_ns, timeout);
 }
 
 /******************************************************************************/
@@ -507,7 +534,7 @@ static int poll__activate(struct sensors_poll_device_t *dev,
     property_get("sensor.debug.level", propbuf, "0");
     debug_lvl = atoi(propbuf);
 
-    LOGV("set active: handle = %d, enable = %d\n", handle, enabled);
+    LOGI("set active: handle = %d, enable = %d\n", handle, enabled);
 
     return ctx->activate(handle, enabled);
 }
@@ -523,20 +550,22 @@ static int poll__setDelay(struct sensors_poll_device_t *dev,
     sensor_delay[handle] = ns;
 #endif
 
-    LOGV("set delay: handle = %d, delay = %dns\n", handle, ns);
+    LOGI("set delay: handle = %d, delay = %dns\n", handle, ns);
 
     sensors_poll_context_t *ctx = (sensors_poll_context_t *)dev;
     int s= ctx->setDelay(handle, ns);
     return s;
 }
 
+#if 0
 static bool ert = false;
+#endif
 
 static int poll__poll(struct sensors_poll_device_t *dev,
                       sensors_event_t* data, int count)
 {
     sensors_poll_context_t *ctx = (sensors_poll_context_t *)dev;
-
+#if 0
     if (!ert) {
         struct sched_param param = {
                 .sched_priority = 90,
@@ -545,7 +574,7 @@ static int poll__poll(struct sensors_poll_device_t *dev,
         ert = true;
 //        ALOGD("set %d to SCHED_FIFO,90", gettid());
     }
-
+#endif
     return ctx->pollEvents(data, count);
 }
 
@@ -554,7 +583,7 @@ static int poll__batch(struct sensors_poll_device_1 *dev,
 {
     sensors_poll_context_t *ctx = (sensors_poll_context_t *)dev;
 
-    LOGV("set batch: handle = %d, period_ns = %dns, timeout = %dns\n", handle, period_ns, timeout);
+    LOGD("set batch: handle = %d, period_ns = %dns, timeout = %dns\n", handle, period_ns, timeout);
 #if SENSOR_KEEP_ALIVE
     if (sensor_delay[handle] == period_ns) {
 //        LOGD("keep sensor(%d) delay %d ns", handle, period_ns);
@@ -569,9 +598,10 @@ static int poll__batch(struct sensors_poll_device_1 *dev,
 static int poll__flush(struct sensors_poll_device_1 *dev,
                       int handle)
 {
-    LOGV("set flush: handle = %d\n", handle);
-    sensor_flush[handle] = 1;
-    return 0;
+    LOGD("set flush: handle = %d\n", handle);
+
+    sensors_poll_context_t *ctx = (sensors_poll_context_t *)dev;
+    return ctx->flush(handle);
 }
 
 /******************************************************************************/
@@ -605,7 +635,7 @@ static int open_sensors(const struct hw_module_t* module, const char* id,
 
     *device = &dev->device.common;
     status = 0;
-    ert = false;
+    //ert = false;
 
 #if SENSOR_KEEP_ALIVE
     memset(sensor_activate, 0, 32*sizeof(int));
@@ -613,9 +643,7 @@ static int open_sensors(const struct hw_module_t* module, const char* id,
     memset(sensor_prev_time, 0, 32*sizeof(int64_t));
 #endif
 
-    memset(sensor_flush, 0, 32*sizeof(int));
-
-    property_get("sensor.debug.time", propbuf, "0");
+    property_get("sensor.debug.time", propbuf, "1");
     debug_time = atoi(propbuf);
 
     return status;
