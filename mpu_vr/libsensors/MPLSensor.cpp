@@ -126,45 +126,45 @@ static struct sensor_t sSensorList[] =
 {
     {(const char *)("MPL Gyroscope"), (const char *)("Invensense"), 1,
      SENSORS_GYROSCOPE_HANDLE,
-     SENSOR_TYPE_GYROSCOPE, 2000.0f, 1.0f, 0.5f, 10000, 0, 0, 0,0,200000,0,0,0},
+     SENSOR_TYPE_GYROSCOPE, 2000.0f, 1.0f, 0.5f, 10000, 0, 0, SENSOR_STRING_TYPE_GYROSCOPE,0,200000,0,0,0},
     {(const char *)("MPL Raw Gyroscope"), (const char *)("Invensense"), 1,
      SENSORS_RAW_GYROSCOPE_HANDLE,
-     SENSOR_TYPE_GYROSCOPE_UNCALIBRATED, 2000.0f, 1.0f, 0.5f, 10000, 0, 0, 0,0,200000,0,0,0},
+     SENSOR_TYPE_GYROSCOPE_UNCALIBRATED, 2000.0f, 1.0f, 0.5f, 10000, 0, 0, SENSOR_STRING_TYPE_GYROSCOPE_UNCALIBRATED,0,200000,0,0,0},
     {(const char *)("MPL Accelerometer"), (const char *)("Invensense"), 1,
      SENSORS_ACCELERATION_HANDLE,
-     SENSOR_TYPE_ACCELEROMETER, 10240.0f, 1.0f, 0.5f, 10000, 0, 0, 0,0,200000,0,0,0},
+     SENSOR_TYPE_ACCELEROMETER, 10240.0f, 1.0f, 0.5f, 10000, 0, 0, SENSOR_STRING_TYPE_ACCELEROMETER,0,200000,0,0,0},
     {(const char *)("MPL Magnetic Field"), (const char *)("Invensense"), 1,
      SENSORS_MAGNETIC_FIELD_HANDLE,
-     SENSOR_TYPE_MAGNETIC_FIELD, 10240.0f, 1.0f, 0.5f, 10000, 0, 0, 0,0,200000,0,0,0},
+     SENSOR_TYPE_MAGNETIC_FIELD, 10240.0f, 1.0f, 0.5f, 10000, 0, 0, SENSOR_STRING_TYPE_MAGNETIC_FIELD,0,200000,0,0,0},
     {(const char *)("MPL Orientation"), (const char *)("Invensense"), 1,
      SENSORS_ORIENTATION_HANDLE,
-     SENSOR_TYPE_ORIENTATION, 360.0f, 1.0f, 9.7f, 10000, 0, 0, 0,0,200000,0,0,0},
+     SENSOR_TYPE_ORIENTATION, 360.0f, 1.0f, 9.7f, 10000, 0, 0, SENSOR_STRING_TYPE_ORIENTATION,0,200000,0,0,0},
     {(const char *)("MPL Rotation Vector"), (const char *)("Invensense"), 1,
      SENSORS_ROTATION_VECTOR_HANDLE,
-     SENSOR_TYPE_ROTATION_VECTOR, 10240.0f, 1.0f, 0.5f, 10000, 0, 0, 0,0,200000,0,0,0},
+     SENSOR_TYPE_ROTATION_VECTOR, 10240.0f, 1.0f, 0.5f, 10000, 0, 0, SENSOR_STRING_TYPE_ROTATION_VECTOR,0,200000,0,0,0},
     {(const char *)("MPL Game Rotation Vector"), (const char *)("Invensense"), 1,
      SENSORS_GAME_ROTATION_VECTOR_HANDLE,
-     SENSOR_TYPE_GAME_ROTATION_VECTOR, 10240.0f, 1.0f, 0.5f, 10000, 0, 0, 0,0,200000,0,0,0},
+     SENSOR_TYPE_GAME_ROTATION_VECTOR, 10240.0f, 1.0f, 0.5f, 10000, 0, 0, SENSOR_STRING_TYPE_GAME_ROTATION_VECTOR,0,200000,0,0,0},
     {(const char *)("MPL Linear Acceleration"), (const char *)("Invensense"), 1,
      SENSORS_LINEAR_ACCEL_HANDLE,
-     SENSOR_TYPE_LINEAR_ACCELERATION, 10240.0f, 1.0f, 0.5f, 10000, 0, 0, 0,0,200000,0,0,0},
+     SENSOR_TYPE_LINEAR_ACCELERATION, 10240.0f, 1.0f, 0.5f, 10000, 0, 0, SENSOR_STRING_TYPE_LINEAR_ACCELERATION,0,200000,0,0,0},
     {(const char *)("MPL Gravity"), (const char *)("Invensense"), 1,
      SENSORS_GRAVITY_HANDLE,
-     SENSOR_TYPE_GRAVITY, 10240.0f, 1.0f, 0.5f, 10000, 0, 0, 0,0,200000,0,0,0},
+     SENSOR_TYPE_GRAVITY, 10240.0f, 1.0f, 0.5f, 10000, 0, 0, SENSOR_STRING_TYPE_GRAVITY,0,200000,0,0,0},
 #if ENABLE_SMD
     {(const char *)("MPL Significant Motion"), (const char *)("Invensense"), 1,
      SENSORS_SIGNIFICANT_MOTION_HANDLE,
-     SENSOR_TYPE_SIGNIFICANT_MOTION, 100.0f, 1.0f, 1.1f, 0, 0, 0, 0,0,200000,0,0,0},
+     SENSOR_TYPE_SIGNIFICANT_MOTION, 100.0f, 1.0f, 1.1f, 0, 0, 0, SENSOR_STRING_TYPE_SIGNIFICANT_MOTION,0,0,SENSOR_FLAG_ONE_SHOT_MODE | SENSOR_FLAG_WAKE_UP,0,0},
 #endif
 #if ENABLE_GEOMAG
     {(const char *)("MPL Geomagnetic Rotation Vector"), (const char *)("Invensense"), 1,
      SENSORS_GEOMAGNETIC_ROTATION_VECTOR_HANDLE,
-     SENSOR_TYPE_GEOMAGNETIC_ROTATION_VECTOR, 10240.0f, 1.0f, 0.5f, 10000, 0, 0, 0,0,200000,0,0,0},
+     SENSOR_TYPE_GEOMAGNETIC_ROTATION_VECTOR, 10240.0f, 1.0f, 0.5f, 10000, 0, 0, SENSOR_STRING_TYPE_GEOMAGNETIC_ROTATION_VECTOR,0,200000,0,0,0},
 #endif
 #ifdef ENABLE_DMP_SCREEN_AUTO_ROTATION
     {(const char *)("MPL Screen Orientation"), (const char *)("Invensense "), 1,
      SENSORS_SCREEN_ORIENTATION_HANDLE,
-     SENSOR_TYPE_SCREEN_ORIENTATION, 100.0f, 1.0f, 1.1f, 0, 0, 0, 0,0,200000,0,0,0},
+     SENSOR_TYPE_SCREEN_ORIENTATION, 100.0f, 1.0f, 1.1f, 0, 0, 0, SENSOR_STRING_TYPE_SCREEN_ORIENTATION,0,0,SENSOR_FLAG_ON_CHANGE_MODE,0,0},
 #endif
 }; 
 #elif defined ANDROID_KITKAT  
@@ -1795,7 +1795,7 @@ int MPLSensor::enable(int32_t handle, int en)
                 (en? "en" : "dis"));
         enableDmpSignificantMotion(en);
         mDmpSignificantMotionEnabled = !!en;
-        if (!en)
+        //if (!en)
             update_delay();
         return 0;
     case ID_SO:
@@ -1806,7 +1806,7 @@ int MPLSensor::enable(int32_t handle, int en)
                 (en? "en" : "dis"));
         enableDmpOrientation(en && isDmpDisplayOrientationOn());
         mDmpOrientationEnabled = !!en;
-        if (!en)
+        //if (!en)
             update_delay();
         return 0;
     case ID_A:
@@ -1962,9 +1962,8 @@ int MPLSensor::enable(int32_t handle, int en)
         enableSensors(sen_mask, flags, changed);
     }
 
-    // update_delay is necessary only when disable
-    // setDelay will be called from fw later when enable
-    if (!en)
+    // update_delay is necessary for andorid8.0
+    //if (!en)
         update_delay();
     
     // pthread_mutex_unlock(&mMplMutex);
@@ -2066,17 +2065,16 @@ int MPLSensor::setDelay(int32_t handle, int64_t ns)
     if (ns < 0)
         return -EINVAL;
 
-    LOGV_IF(PROCESS_VERBOSE,
-            "setDelay : %llu ns, (%.2f Hz)", ns, 1000000000.f / ns);
-
     char propbuf[PROPERTY_VALUE_MAX];
     property_get("sensor.debug.maxrate", propbuf, "1000");
     static int64_t max_rate = 1000000000LL/atoi(propbuf);
-    LOGD("max rate: %lld\n", max_rate);
+    //LOGD("max rate: %lld\n", max_rate);
     // limit all rates to reasonable ones */
     if (ns < max_rate) {
 		ns = max_rate;
     }
+
+    LOGD("setDelay : %llu ns, (%.2f Hz)", ns, 1000000000.f / ns);
 
     /* store request rate to mDelays arrary for each sensor */
     mDelays[what] = ns;
@@ -2610,7 +2608,7 @@ void MPLSensor::buildMpuEvent(void)
                     || mCachedCompassData[0] != 0)) {
         mask |= 1 << MagneticField;
     }
-
+#if 0
     int64_t tm_cur = get_time_ns();
     int64_t tm_delta = tm_cur - mSensorTimestamp;
     if (tm_min==0 && tm_max==0)
@@ -2627,7 +2625,7 @@ void MPLSensor::buildMpuEvent(void)
         tm_last_print = tm_cur;
         tm_min = tm_max = tm_count = tm_sum = 0;
     }
-
+#endif
 //    int64_t n = get_time_ns();
 //    ALOGD("MPU HAL: tm=%lld, %lld, %lld\n", mSensorTimestamp, n, n-mSensorTimestamp);
 
