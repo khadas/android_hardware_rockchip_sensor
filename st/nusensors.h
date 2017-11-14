@@ -150,8 +150,10 @@ int init_nusensors(hw_module_t const* module, hw_device_t** device);
 #define CONVERT_O_R                 (CONVERT_O)
 
 // conversion of gyro data to SI units (radian/sec)
+// conversion of gyro data to dps fs 2000dps
+// = 2000*Pi /(32768 * 180)
 #define RANGE_GYRO                  (2000.0f*(float)M_PI/180.0f)
-#define CONVERT_GYRO                ((70.0f / 1000.0f) * ((float)M_PI / 180.0f))
+#define CONVERT_GYRO                (0.001065264)
 #define CONVERT_GYRO_X              (CONVERT_GYRO)
 #define CONVERT_GYRO_Y              (CONVERT_GYRO)
 #define CONVERT_GYRO_Z              (CONVERT_GYRO)

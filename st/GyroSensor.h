@@ -31,27 +31,21 @@
 struct input_event;
 
 class GyroSensor : public SensorBase {
+private:
     int mEnabled;
     InputEventCircularReader mInputReader;
     sensors_event_t mPendingEvent;
-    sensors_event_t mGyroInsertingEvents[INSERT_FAKE_MAX];
-    int64_t mPretimestamp;
-    bool mHasPendingEvent;
-    char input_sysfs_path[PATH_MAX];
-    int input_sysfs_path_len;
-    int64_t mEnabledTime;
-
-    int setInitialState();
+    int gyro_offset[3];
+    void readCalibration();
 
 public:
             GyroSensor();
     virtual ~GyroSensor();
     virtual int readEvents(sensors_event_t* data, int count);
-    virtual bool hasPendingEvents() const;
+    void processEvent(int code, int value);
     virtual int setDelay(int32_t handle, int64_t ns);
     virtual int enable(int32_t handle, int enabled);
     virtual int isActivated(int handle);
-    void instertFakeData(int num) ;
 };
 
 /*****************************************************************************/

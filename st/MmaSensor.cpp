@@ -33,18 +33,17 @@
 MmaSensor::MmaSensor()
 : SensorBase(MMA_DEVICE_NAME, "gsensor"),
       mEnabled(0),
-      mPendingMask(0),
       mInputReader(32)
 {
     memset(accel_offset, 0, sizeof(accel_offset));
 
-    mPendingEvents.version = sizeof(sensors_event_t);
-    mPendingEvents.sensor = ID_A;
-    mPendingEvents.type = SENSOR_TYPE_ACCELEROMETER;
-    mPendingEvents.acceleration.status = SENSOR_STATUS_ACCURACY_HIGH;
-    memset(mPendingEvents.data, 0, sizeof(mPendingEvents.data));
+    mPendingEvent.version = sizeof(sensors_event_t);
+    mPendingEvent.sensor = ID_A;
+    mPendingEvent.type = SENSOR_TYPE_ACCELEROMETER;
+    mPendingEvent.acceleration.status = SENSOR_STATUS_ACCURACY_HIGH;
+    memset(mPendingEvent.data, 0, sizeof(mPendingEvent.data));
 
-    mDelays = 200000000; // 200 ms by default
+    mDelay = 200000000; // 200 ms by default
 
     open_device();
 
@@ -95,7 +94,7 @@ int MmaSensor::setDelay(int32_t /* handle */, int64_t ns)
     if (ns < 0)
         return -EINVAL;
 
-    mDelays = ns;
+    mDelay = ns;
     return update_delay();
 }
 
@@ -106,14 +105,14 @@ int MmaSensor::update_delay()
     if (dev_fd < 0)
         open_device();
 
-    short delay = mDelays / 1000000;
+    short delay = mDelay / 1000000;
     LOGI("MmaSensor update delay: %dms\n", delay);
 
     if (0 > (result = ioctl(dev_fd, GSENSOR_IOCTL_APP_SET_RATE, &delay))) {
         LOGE("fail to perform GSENSOR_IOCTL_APP_SET_RATE, result = %d, error is '%s'", result, strerror(errno));
     }
     else {
-        LOGD("update delay to %d ms\n", delay);
+        LOGD("update gsensor delay to %d ms\n", delay);
     }
     return result;
 }
@@ -140,8 +139,8 @@ int MmaSensor::readEvents(sensors_event_t* data, int count)
         if (type == EV_ABS) {
             processEvent(event->code, event->value);
         } else if (type == EV_SYN) {
-            mPendingEvents.timestamp = getTimestamp();
-            *data++ = mPendingEvents;
+            mPendingEvent.timestamp = getTimestamp();
+            *data++ = mPendingEvent;
             count--;
             numEventReceived++;
         } else {
@@ -158,13 +157,13 @@ void MmaSensor::processEvent(int code, int value)
 {
     switch (code) {
         case EVENT_TYPE_ACCEL_X:
-            mPendingEvents.acceleration.x = (value - accel_offset[0]) * ACCELERATION_RATIO_ANDROID_TO_HW;
+            mPendingEvent.acceleration.x = (value - accel_offset[0]) * ACCELERATION_RATIO_ANDROID_TO_HW;
             break;
         case EVENT_TYPE_ACCEL_Y:
-            mPendingEvents.acceleration.y = (value - accel_offset[1]) * ACCELERATION_RATIO_ANDROID_TO_HW;
+            mPendingEvent.acceleration.y = (value - accel_offset[1]) * ACCELERATION_RATIO_ANDROID_TO_HW;
             break;
         case EVENT_TYPE_ACCEL_Z:
-            mPendingEvents.acceleration.z = (value - accel_offset[2]) * ACCELERATION_RATIO_ANDROID_TO_HW;
+            mPendingEvent.acceleration.z = (value - accel_offset[2]) * ACCELERATION_RATIO_ANDROID_TO_HW;
             break;
     }
 }
