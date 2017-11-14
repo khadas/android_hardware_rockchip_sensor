@@ -22,6 +22,7 @@
 
 #include <poll.h>
 #include <pthread.h>
+#include <stdlib.h>
 
 #include <linux/input.h>
 
@@ -209,6 +210,7 @@ static int debug_time = 0;
 static int debug_lvl = 0;
 
 #define NSEC_PER_SEC            1000000000
+#include <cutils/properties.h>
 
 static inline int64_t timespec_to_ns(const struct timespec *ts)
 {
@@ -318,6 +320,14 @@ static int poll__activate(struct sensors_poll_device_t *dev,
     sensors_poll_context_t *ctx = (sensors_poll_context_t *)dev;
 
     LOGI("set active: handle = %d, enable = %d\n", handle, enabled);
+
+    char propbuf[PROPERTY_VALUE_MAX];
+    property_get("sensor.debug.level", propbuf, "0");
+    debug_lvl = atoi(propbuf);
+
+    memset(propbuf, 0, sizeof(propbuf));
+    property_get("sensor.debug.time", propbuf, "0");
+    debug_time = atoi(propbuf);
 
     return ctx->activate(handle, enabled);
 }

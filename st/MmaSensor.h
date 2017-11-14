@@ -46,10 +46,9 @@ private:
     int update_delay();
     void readCalibration();
     uint32_t mEnabled;
-    uint32_t mPendingMask;
     InputEventCircularReader mInputReader;
-    sensors_event_t mPendingEvents;
-    int64_t mDelays;
+    sensors_event_t mPendingEvent;
+    int64_t mDelay;
     int accel_offset[3];
 };
 
