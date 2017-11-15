@@ -51,6 +51,8 @@ GyroSensor::GyroSensor()
         LOGE("%s:%s\n", __func__, strerror(-err));
         return;
     }
+
+    readCalibration();
 }
 
 GyroSensor::~GyroSensor() {
