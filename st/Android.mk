@@ -12,10 +12,6 @@ LOCAL_CFLAGS += \
 LOCAL_CPPFLAGS += \
 	-Wno-unused-parameter
 
-ifeq ($(BUILD_WITH_GMS_CER), true)
-LOCAL_CFLAGS += -DINSERT_FAKE_DATA
-endif
-
 ifeq ($(BOARD_GRAVITY_SENSOR_SUPPORT), true)
 LOCAL_CFLAGS += -DGRAVITY_SENSOR_SUPPORT
 endif
@@ -70,21 +66,6 @@ LOCAL_SHARED_LIBRARIES := \
 	liblog \
 	libcutils \
 	libutils
-
-#LOCAL_LDFLAGS += $(LOCAL_PATH)/LibFusion_ARM_cpp.a
-ifneq ($(strip $(TARGET_2ND_ARCH)), )
-LOCAL_CFLAGS += -DFLAG64BIT
-else
-LOCAL_LDFLAGS += $(LOCAL_PATH)/MEMSAlgLib_SI_ARM_cpp.a
-endif
-
-ifeq ($(strip $(BOARD_SENSOR_ANGLE)), true)
-LOCAL_CFLAGS += -DANGLE_SUPPORT
-endif
-
-ifeq ($(strip $(BOARD_SENSOR_CALIBRATION)), true)
-LOCAL_CFLAGS += -DCALIBRATION_SUPPORT
-endif
 
 include $(BUILD_SHARED_LIBRARY)
 
