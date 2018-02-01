@@ -12,9 +12,10 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-    int rkvr_add_sensor_data2(float* accl, float* gyro, int64_t timestamp);
 
-    int inv_get_sensor_type_orientation(float *values, int8_t *accuracy,
+	int rkvr_add_sensor_data2(float* accl, float* gyro, int64_t timestamp);
+
+	int inv_get_sensor_type_orientation(float *values, int8_t *accuracy,
                                          inv_time_t * timestamp);
     int inv_get_sensor_type_accelerometer(float *values, int8_t *accuracy,
                                            inv_time_t * timestamp);
