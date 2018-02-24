@@ -350,7 +350,7 @@ static int64_t sensor_prev_time[32];
 static int debug_lvl = 0;
 
 /* print sensor data latency */
-static int debug_time = 1;
+static int debug_time = 0;
 #include <cutils/properties.h>
 
 int sensors_poll_context_t::pollEvents(sensors_event_t *data, int count)
@@ -643,7 +643,7 @@ static int open_sensors(const struct hw_module_t* module, const char* id,
     memset(sensor_prev_time, 0, 32*sizeof(int64_t));
 #endif
 
-    property_get("sensor.debug.time", propbuf, "1");
+    property_get("sensor.debug.time", propbuf, "0");
     debug_time = atoi(propbuf);
 
     return status;
