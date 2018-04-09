@@ -311,7 +311,7 @@ include $(BUILD_PREBUILT)
 endif
 
 # Build self_test bin
-ifeq (${TARGET_ARCH},arm64)
+#ifeq (${TARGET_ARCH},arm64)
 
 include $(CLEAR_VARS)
 
@@ -342,4 +342,4 @@ LOCAL_SHARED_LIBRARIES += libmplmpu
 LOCAL_SHARED_LIBRARIES += libmllite
 include $(BUILD_EXECUTABLE)
 
-endif
+#endif
