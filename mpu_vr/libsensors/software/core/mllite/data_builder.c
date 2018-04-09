@@ -103,122 +103,14 @@ static inv_error_t inv_db_load_func(const unsigned char *data)
     if (sensors.compass.accuracy == 3) {
         inv_set_compass_bias_found(1);
     }
-
-	MPL_LOGI("Load: accel cal: %d, \(%ld,%ld,%ld\), %ld\n",
-						inv_data_builder.save.accel_accuracy,
-						inv_data_builder.save.accel_bias[0],
-						inv_data_builder.save.accel_bias[1],
-						inv_data_builder.save.accel_bias[2],
-						inv_data_builder.save.accel_temp);
-	inv_data_builder.save.accel_bias[0] = 0;
-	inv_data_builder.save.accel_bias[1] = 0;
-	inv_data_builder.save.accel_bias[2] = 0;
-	MPL_LOGI("Load: gyro cal: %d, \(%ld,%ld,%ld\), %ld\n",
-						inv_data_builder.save.gyro_accuracy,
-						inv_data_builder.save.gyro_bias[0],
-						inv_data_builder.save.gyro_bias[1],
-						inv_data_builder.save.gyro_bias[2],
-						inv_data_builder.save.gyro_temp);
     return INV_SUCCESS;
 }
 
 /** This function returns the data to be stored in non-volatile memory between power off */
 static inv_error_t inv_db_save_func(unsigned char *data)
 {
-	MPL_LOGI("Save: accel cal: %d, \(%ld,%ld,%ld\), %ld\n",
-						inv_data_builder.save.accel_accuracy,
-						inv_data_builder.save.accel_bias[0],
-						inv_data_builder.save.accel_bias[1],
-						inv_data_builder.save.accel_bias[2],
-						inv_data_builder.save.accel_temp);
-	MPL_LOGI("Save: gyro cal: %d, \(%ld,%ld,%ld\), %ld\n",
-						inv_data_builder.save.gyro_accuracy,
-						inv_data_builder.save.gyro_bias[0],
-						inv_data_builder.save.gyro_bias[1],
-						inv_data_builder.save.gyro_bias[2],
-						inv_data_builder.save.gyro_temp);
-
     memcpy(data, &inv_data_builder.save, sizeof(inv_data_builder.save));
     return INV_SUCCESS;
-}
-
-#include <fcntl.h>
-#include <errno.h>
-#include <dirent.h>
-#include <math.h>
-#include <poll.h>
-#include <pthread.h>
-#include <sys/cdefs.h>
-#include <sys/types.h>
-	 
-#include <linux/input.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-
-typedef		unsigned short	    uint16;
-typedef		unsigned long	    uint32;
-typedef		unsigned char	    uint8;
-
-#define VENDOR_SECTOR_OP_TAG        0x444E4556 // "VEND"
-#define RKNAND_GET_VENDOR_SECTOR1       _IOW('v', 18, unsigned int)
-#define RKNAND_STORE_VENDOR_SECTOR1     _IOW('v', 19, unsigned int)
-
-#define RKNAND_SYS_STORGAE_DATA_LEN 512
-
-typedef struct tagRKNAND_SYS_STORGAE
-{
-    uint32  tag;
-    uint32  len;
-    uint8   data[RKNAND_SYS_STORGAE_DATA_LEN];
-}RKNAND_SYS_STORGAE;
-
-struct calibrate_data {
-	char tag[8];
-	float v[3];
-};
-
-static long factory_accel_calibrate[3] = {0, 0, 0};
-static long user_accel_calibrate[3] = {0, 0, 0};
-static long user_gyro_calibrate[3] = {0, 0, 0};
-
-int gsensor_calibrate_load(float* v)
-{
-    uint32 i;
-    int ret ;
-    RKNAND_SYS_STORGAE sysData;
-
-    int sys_fd = open("/dev/rknand_sys_storage",O_RDWR,0);
-    if (sys_fd < 0) {
-	sys_fd = open("/dev/vendor_storage",O_RDWR,0);
-	if (sys_fd < 0) {
-        	MPL_LOGE("rknand_sys_storage open fail\n");
-        	return -1;
-	}
-    }
-
-    sysData.tag = VENDOR_SECTOR_OP_TAG;
-    sysData.len = RKNAND_SYS_STORGAE_DATA_LEN-8;
-	memset(sysData.data, 0, RKNAND_SYS_STORGAE_DATA_LEN);
-
-    ret = ioctl(sys_fd, RKNAND_GET_VENDOR_SECTOR1, &sysData);
-    if(ret){
-        MPL_LOGE("get vendor_sector error\n");
-        return -1;
-    }
-
-	struct calibrate_data* pcd = (struct calibrate_data*)sysData.data;
-	if (!strcmp(pcd->tag, "GSENCAL")) {
-		v[0] = pcd->v[0];
-		v[1] = pcd->v[1];
-		v[2] = pcd->v[2];
-		MPL_LOGD("Load factory calibrate: %+.4f %+.4f %+.4f\n", v[0], v[1], v[2]);
-	} else {
-		MPL_LOGD("No factory calibrate!\n");
-	}
-
-    return 0;
 }
 
 /** Initialize the data builder
@@ -231,52 +123,6 @@ inv_error_t inv_init_data_builder(void)
 
     // disable the soft iron transform process
     inv_reset_compass_soft_iron_matrix();
-
-#define ACCEL_CONVERSION_R (1.0f/0.000149637603759766f)
-#define GYRO_CONVERSION_R (1.0f/(2.66316109007924e-007f))
-	char propbuf[64];
-	property_get("ro.sensor.pcba", propbuf, "0");
-	MPL_LOGD("ro.sensor.pcba=%s\n", propbuf);
-	// load calibrate from vendor data
-	if (propbuf[0] == '0') {
-		float gc[3] = {0.0, 0.0, 0.0};
-		gsensor_calibrate_load(gc);
-		factory_accel_calibrate[0] = (long)(gc[0]*ACCEL_CONVERSION_R);
-		factory_accel_calibrate[1] = (long)(gc[1]*ACCEL_CONVERSION_R);
-		factory_accel_calibrate[2] = (long)(gc[2]*ACCEL_CONVERSION_R);
-	}
-	float accel_bias[3] = {0.0, 0.0, 0.0};
-	property_get("sensor.bias.accel.x", propbuf, "0.0");
-	accel_bias[0] = atof(propbuf);
-	property_get("sensor.bias.accel.y", propbuf, "0.0");
-	accel_bias[1] = atof(propbuf);
-	property_get("sensor.bias.accel.z", propbuf, "0.0");
-	accel_bias[2] = atof(propbuf);
-	user_accel_calibrate[0] = (long)(accel_bias[0]*ACCEL_CONVERSION_R);
-	user_accel_calibrate[1] = (long)(accel_bias[1]*ACCEL_CONVERSION_R);
-	user_accel_calibrate[2] = (long)(accel_bias[2]*ACCEL_CONVERSION_R);
-
-	float gyro_bias[3];
-	property_get("sensor.bias.gyro.x", propbuf, "0.0");
-	gyro_bias[0] = atof(propbuf);
-	property_get("sensor.bias.gyro.y", propbuf, "0.0");
-	gyro_bias[1] = atof(propbuf);
-	property_get("sensor.bias.gyro.z", propbuf, "0.0");
-	gyro_bias[2] = atof(propbuf);
-	user_gyro_calibrate[0] = (long)(gyro_bias[0]*GYRO_CONVERSION_R);
-	user_gyro_calibrate[1] = (long)(gyro_bias[1]*GYRO_CONVERSION_R);
-	user_gyro_calibrate[2] = (long)(gyro_bias[2]*GYRO_CONVERSION_R);
-
-	MPL_LOGD("ACCEL_CONVERSION_R=%f, GYRO_CONVERSION_R=%f",
-		ACCEL_CONVERSION_R, GYRO_CONVERSION_R);
-	MPL_LOGD("factory_accel_calibrate: %ld %ld %ld\n",
-		factory_accel_calibrate[0],
-		factory_accel_calibrate[1],
-		factory_accel_calibrate[2]);
-	MPL_LOGD("user_accel_calibrate: %ld %ld %ld\n", user_accel_calibrate[0],
-		user_accel_calibrate[1], user_accel_calibrate[2]);
-	MPL_LOGD("user_gyro_calibrate: %ld %ld %ld\n", user_gyro_calibrate[0],
-		user_gyro_calibrate[1], user_gyro_calibrate[2]);
 
     return inv_register_load_store(inv_db_load_func, inv_db_save_func,
                                    sizeof(inv_data_builder.save),
@@ -656,14 +502,10 @@ int inv_get_compass_disturbance(void) {
 void inv_set_accel_bias(const long *bias, int accuracy)
 {
     if (bias) {
-		MPL_LOGD("inv_set_accel_bias: accuracy=%d, bias=(%ld %ld %ld)\n",
-				accuracy, bias[0], bias[1], bias[2]);
-#if 0
         if (memcmp(inv_data_builder.save.accel_bias, bias, sizeof(inv_data_builder.save.accel_bias))) {
             memcpy(inv_data_builder.save.accel_bias, bias, sizeof(inv_data_builder.save.accel_bias));
             inv_apply_calibration(&sensors.accel, inv_data_builder.save.accel_bias);
         }
-#endif
     }
     sensors.accel.accuracy = accuracy;
     inv_data_builder.save.accel_accuracy = accuracy;
@@ -687,7 +529,6 @@ void inv_set_accel_accuracy(int accuracy)
 */
 void inv_set_accel_bias_mask(const long *bias, int accuracy, int mask)
 {
-#if 0
     if (bias) {
         if (mask & 1){
             inv_data_builder.save.accel_bias[0] = bias[0];
@@ -704,113 +545,8 @@ void inv_set_accel_bias_mask(const long *bias, int accuracy, int mask)
     sensors.accel.accuracy = accuracy;
     inv_data_builder.save.accel_accuracy = accuracy;
     inv_set_message(INV_MSG_NEW_AB_EVENT, INV_MSG_NEW_AB_EVENT, 0);
-#endif
 }
 
-/*
-typedef unsigned long long uint64_t;
-
-#include <fcntl.h>
-#include <errno.h>
-#include <math.h>
-#include <poll.h>
-#include <unistd.h>
-#include <stdlib.h>
-#include <dirent.h>
-#include <sys/select.h>
-#include <cutils/log.h>
-#include <linux/input.h>
-
-int64_t getTimestamp()
-{
-    struct timespec t;
-    t.tv_sec = t.tv_nsec = 0;
-    clock_gettime(CLOCK_MONOTONIC, &t);
-    return (int64_t)(t.tv_sec) * 1000000000LL + t.tv_nsec;
-}
-
-int64_t tm_old = 0;
-int64_t tm_new = 0;
-*/
-
-#define BIAS_LEN_LIMIT_200HZ		0.002f
-#define BIAS_LEN_LIMIT_1000HZ		0.002f
-#define BIAS_VALID_COUNT_200HZ		4
-#define BIAS_VALID_COUNT_1000HZ		16
-
-static inline float get_delta_len(float* a, float* b)
-{
-	float c[3];
-	c[0] = a[0]-b[0];
-	c[1] = a[1]-b[1];
-	c[2] = a[2]-b[2];
-	return sqrt(c[0]*c[0]+c[1]*c[1]+c[2]*c[2]);
-}
-
-static int is_validate_bias(float* new_bias)
-{
-	static float save_bias[3] = {0.0f, 0.0f, 0.0f};
-	static float prev_bias[3] = {0.0f, 0.0f, 0.0f};
-	static int valid_count = 0;
-	float bias_len_NS = 0.0f;
-	float bias_len_NP = 0.0f;
-	int ret = 0;
-	float bias_limit;
-
-	bias_limit = (sensors.gyro.sample_rate_ms<5)?BIAS_LEN_LIMIT_1000HZ:BIAS_LEN_LIMIT_200HZ;
-
-	if (save_bias[0]==0 && save_bias[1]==0 && save_bias[2]==0) {
-		save_bias[0] = new_bias[0];
-		save_bias[1] = new_bias[1];
-		save_bias[2] = new_bias[2];
-		return 1;
-	}
-
-	bias_len_NS = get_delta_len(new_bias, save_bias);
-	bias_len_NP = get_delta_len(new_bias, prev_bias);
-
-/*
-	MPL_LOGD("BIAS: \n\tNEW (%+f %+f %+f)\n\tSAVE(%+f %+f %+f)\n\tPREV(%+f %+f %+f)\n",
-				new_bias[0], new_bias[1], new_bias[2],
-				save_bias[0], save_bias[1], save_bias[2],
-				prev_bias[0], prev_bias[1], prev_bias[2]);
-
-	MPL_LOGD("BIAS LEN: N-S:%f N-P:%f\n", bias_len_NS, bias_len_NP);
-*/
-	if (bias_len_NS < bias_limit) {
-		save_bias[0] = new_bias[0];
-		save_bias[1] = new_bias[1];
-		save_bias[2] = new_bias[2];
-		ret = 1;
-/*
-		MPL_LOGD("update save bias by NS(%f) %+f %+f %+f", bias_len_NS,
-			save_bias[0], save_bias[1], save_bias[2]);
-*/
-		valid_count = 0;
-	} else if (bias_len_NP < bias_limit) {
-		++valid_count;
-		if (valid_count>5) {
-			save_bias[0] = new_bias[0];
-			save_bias[1] = new_bias[1];
-			save_bias[2] = new_bias[2];
-			ret = 1;
-/*
-			MPL_LOGD("update save bias by NP(%f) %+f %+f %+f", bias_len_NP,
-				save_bias[0], save_bias[1], save_bias[2]);
-*/
-			valid_count = 0;
-		}
-//		MPL_LOGD("valid_count: %d", valid_count);
-	} else {
-		valid_count = 0;
-	}
-
-	prev_bias[0] = new_bias[0];
-	prev_bias[1] = new_bias[1];
-	prev_bias[2] = new_bias[2];
-
-	return ret;
-}
 
 /** Sets the gyro bias
 * @param[in] bias Gyro bias in hardware units scaled by 2^16. In chip mounting frame.
@@ -820,58 +556,6 @@ static int is_validate_bias(float* new_bias)
 void inv_set_gyro_bias(const long *bias, int accuracy)
 {
     if (bias != NULL) {
-#if 1
-		float gyro_bias[3];
-		int i=0;
-		for(i=0; i<3; i++) {
-			float temp = (float) sensors.gyro.sensitivity / (1L << 30);
-			gyro_bias[i] = (float) (bias[i] * temp / (1<<16) / 180 * M_PI);
-		}
-		if (!is_validate_bias(gyro_bias)) {
-//			MPL_LOGD("inv_set_gyro_bias: skip invalid bias!");
-			return;
-		}
-#else
-		if (inv_data_builder.save.gyro_bias[0] ||
-			inv_data_builder.save.gyro_bias[1] ||
-			inv_data_builder.save.gyro_bias[2]) {
-			float gyro_bias_new[3];
-			float gyro_bias_old[3];
-			float bias_delta[3];
-			int i=0;
-			for(i=0; i<3; i++) {
-				float temp = (float) sensors.gyro.sensitivity / (1L << 30);
-				gyro_bias_old[i] = (float) (inv_data_builder.save.gyro_bias[i] * temp / (1<<16) / 180 * M_PI);
-				gyro_bias_new[i] = (float) (bias[i] * temp / (1<<16) / 180 * M_PI);
-			}
-			if (tm_old == 0)
-				tm_old = tm_new = getTimestamp();
-			else {
-				tm_old = tm_new;
-				tm_new = getTimestamp();
-			}
-
-			bias_delta[0] = fabs(gyro_bias_new[0]-gyro_bias_old[0]);
-			bias_delta[1] = fabs(gyro_bias_new[1]-gyro_bias_old[1]);
-			bias_delta[2] = fabs(gyro_bias_new[2]-gyro_bias_old[2]);
-
-//			MPL_LOGD("inv_set_gyro_bias: tm_delta=%lld, bias_delta=(%+f %+f %+f) %f\n",
-//	 					tm_new-tm_old, bias_delta[0], bias_delta[1], bias_delta[2],
-//	 					sqrt(bias_delta[0]*bias_delta[0]+bias_delta[1]*bias_delta[1]+bias_delta[2]*bias_delta[2]));
-
-			if (bias_delta[0] >= 0.001 || bias_delta[1] >= 0.001 || bias_delta[2] >= 0.001) {
-			//	MPL_LOGD("skip gyro bias");
-//				return;
-			}
-			MPL_LOGD("inv_set_gyro_bias: OLD(%+f %+f %+f), NEW(%+f %+f %+f), %lld, %f\n",
-						gyro_bias_old[0], gyro_bias_old[1], gyro_bias_old[2],
-						gyro_bias_new[0], gyro_bias_new[1], gyro_bias_new[2],
-						tm_new-tm_old,
-						sqrt(bias_delta[0]*bias_delta[0]+bias_delta[1]*bias_delta[1]+bias_delta[2]*bias_delta[2]));
-			if(sqrt(bias_delta[0]*bias_delta[0]+bias_delta[1]*bias_delta[1]+bias_delta[2]*bias_delta[2])>=BIAS_LEN_LIMIT_1000HZ)
-				MPL_LOGD("inv_set_gyro_bias: skip invalid bias!");
-		}
-#endif
         if (memcmp(inv_data_builder.save.gyro_bias, bias, sizeof(inv_data_builder.save.gyro_bias))) {
             memcpy(inv_data_builder.save.gyro_bias, bias, sizeof(inv_data_builder.save.gyro_bias));
             inv_apply_calibration(&sensors.gyro, inv_data_builder.save.gyro_bias);
@@ -1384,9 +1068,6 @@ void inv_get_accel_set(long *data, int8_t *accuracy, inv_time_t *timestamp)
 {
     if (data != NULL) {
         memcpy(data, sensors.accel.calibrated, sizeof(sensors.accel.calibrated));
-		data[0] -= factory_accel_calibrate[0]+user_accel_calibrate[0];
-		data[1] -= factory_accel_calibrate[1]+user_accel_calibrate[1];
-		data[2] -= factory_accel_calibrate[2]+user_accel_calibrate[2];
     }
     if (timestamp != NULL) {
         *timestamp = sensors.accel.timestamp;
@@ -1404,9 +1085,6 @@ void inv_get_accel_set(long *data, int8_t *accuracy, inv_time_t *timestamp)
 void inv_get_gyro_set(long *data, int8_t *accuracy, inv_time_t *timestamp)
 {
     memcpy(data, sensors.gyro.calibrated, sizeof(sensors.gyro.calibrated));
-	data[0] -= user_gyro_calibrate[0];
-	data[1] -= user_gyro_calibrate[1];
-	data[2] -= user_gyro_calibrate[2];
     if (timestamp != NULL) {
         *timestamp = sensors.gyro.timestamp;
     }
@@ -1423,9 +1101,6 @@ void inv_get_gyro_set(long *data, int8_t *accuracy, inv_time_t *timestamp)
 void inv_get_gyro_set_raw(long *data, int8_t *accuracy, inv_time_t *timestamp)
 {
     memcpy(data, sensors.gyro.raw_scaled, sizeof(sensors.gyro.raw_scaled));
-	data[0] -= user_gyro_calibrate[0];
-	data[1] -= user_gyro_calibrate[1];
-	data[2] -= user_gyro_calibrate[2];
     if (timestamp != NULL) {
         *timestamp = sensors.gyro.timestamp;
     }

@@ -7,16 +7,17 @@
 #   be customized such as:
 #     $CROSS, $PRODUCT, $KERNEL_ROOT
 
-export ANDROID_BASE=/home/lyx
+export ANDROID_BASE=/home/lyx/work/rk3288-8.1
 
 make -C build/android \
 	VERBOSE=0 \
 	TARGET=android \
-	ANDROID_ROOT=${ANDROID_BASE}/rk3399_vr \
-	KERNEL_ROOT=${ANDROID_BASE}/rk3399_vr/kernel \
-	CROSS=${ANDROID_BASE}/rk3399_vr/prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9/bin/aarch64-linux-android- \
-	PRODUCT=rk3399_64_vr \
+	ANDROID_ROOT=${ANDROID_BASE} \
+	KERNEL_ROOT=${ANDROID_BASE}/kernel \
+	CROSS=${ANDROID_BASE}/prebuilts/gcc/linux-x86/arm/arm-linux-androideabi-4.9/bin/arm-linux-androideabi- \
+	PRODUCT=rk3288 \
 	MPL_LIB_NAME=mplmpu \
 	echo_in_colors=echo \
+	ARCH=arm \
 	-f shared.mk
 

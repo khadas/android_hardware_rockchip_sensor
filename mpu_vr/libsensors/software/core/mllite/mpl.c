@@ -46,19 +46,7 @@ inv_error_t inv_init_mpl(void)
     return INV_SUCCESS;
 }
 
-/*
- * v1.0
- *    add gyro bias filter
- * v1.1
- *    support user calibrate
- * v1.2
- *    support rkvr
- * v1.3
- *    rkvr use rkvr_add_sensor_data2
- * v1.4
- *    support rk vendor storage
- */
-const char ml_ver[] = "InvenSense MA 5.1.5 RC170210-v1.4";
+const char ml_ver[] = "InvenSense MA 5.1.5 RC0806";
 
 /**
  *  @brief  used to get the MPL version.

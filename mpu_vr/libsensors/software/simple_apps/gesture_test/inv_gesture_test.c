@@ -140,13 +140,11 @@ int _kbhit(void)
     static bool initialized = false;
 
     if (! initialized) {
-/*    	
         // Use termios to turn off line buffering
         struct termios term;
         tcgetattr(STDIN, &term);
         term.c_lflag &= ~ICANON;
         tcsetattr(STDIN, TCSANOW, &term);
-*/
         setbuf(stdin, NULL);
         initialized = true;
     }

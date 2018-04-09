@@ -24,8 +24,6 @@
 #include "start_manager.h"
 #include "data_builder.h"
 #include "results_holder.h"
-#undef MPL_LOG_TAG
-#define MPL_LOG_TAG "MPL"
 
 /* commenting this define out will bypass the low pass filter noise reduction
    filter for compass data.
@@ -58,98 +56,6 @@ struct hal_output_t {
 
 static struct hal_output_t hal_out;
 
-#include <fcntl.h>
-#include <linux/input.h>
-
-#define HIDIOCNOTIFY(len)    _IOC(_IOC_WRITE|_IOC_READ, 'H', 0x08, len)
-
-typedef int8_t          SByte;
-typedef uint8_t         UByte;
-typedef int16_t         SInt16;
-typedef uint16_t        UInt16;
-typedef int32_t         SInt32;
-typedef uint32_t        UInt32;
-typedef int64_t         SInt64;
-typedef uint64_t        UInt64;
-
-enum TrackerMessageType
-{
-    TrackerMessage_None              = 0,
-    TrackerMessage_Sensors           = 1,
-    TrackerMessage_Unknown           = 0x100,
-    TrackerMessage_SizeError         = 0x101,
-};
-
-void PackSensor(UByte* buffer, SInt32 x, SInt32 y, SInt32 z)
-{
-    // Pack 3 32 bit integers into 8 bytes
-    buffer[0] = (UByte)(x >> 13);
-    buffer[1] = (UByte)(x >> 5);
-    buffer[2] = (UByte)((x << 3) | ((y >> 18) & 0x07));
-    buffer[3] = (UByte)(y >> 10);
-    buffer[4] = (UByte)(y >> 2);
-    buffer[5] = (UByte)((y << 6) | ((z >> 15) & 0x3F));
-    buffer[6] = (UByte)(z >> 7);
-    buffer[7] = (UByte)(z << 1);
-}
-
-void Sensor_Encode(UByte* buffer, float* accel, float* gyro, int64_t timestamp)
-{
-    SInt32 x, y, z;
-    buffer[0] = TrackerMessage_Sensors;
-    buffer[1] = 1; //SampleCount
-
-    *(UInt16*)(buffer+2) = (UInt16)(timestamp/1000000LL); //ns to ms
-    *(UInt16*)(buffer+4) = 0;
-    *(SInt16*)(buffer+6) = 0;//Temperature;
-
-    y = (SInt32)(accel[0] * 1e4f);
-    x = (SInt32)(accel[1] * 1e4f) * (-1);
-    z = (SInt32)(accel[2] * 1e4f);
-    PackSensor(buffer + 8, x, y, z);
-
-    y = (SInt32)(gyro[0] * 1e4f);
-    x = (SInt32)(gyro[1] * 1e4f) * (-1);
-    z = (SInt32)(gyro[2] * 1e4f);
-    PackSensor(buffer + 16, x, y, z);
-}
-
-static float rkvr_accel_data[3];
-static float rkvr_gyro_data[3];
-static int64_t rkvr_timestamp;
-static int rkvr_fd = -1;
-static int rkvr_recv_data=0;
-int rkvr_add_sensor_data2(float* accl, float* gyro, int64_t timestamp)
-{
-	UByte buffer[62] = {0};
-	Sensor_Encode(buffer, accl, gyro, timestamp);
-	if (rkvr_fd > 0)
-		ioctl(rkvr_fd, HIDIOCNOTIFY(62), buffer);
-}
-
-int rkvr_add_sensor_data(float* data, int type, int64_t timestamp)
-{
-	if (type==0) {
-		//MPL_LOGD("rkvr_add_sensor_data accle\n");
-		memcpy(rkvr_accel_data, data, sizeof(rkvr_accel_data));
-		rkvr_timestamp = timestamp;
-		rkvr_recv_data |= 1;
-	} else if (type==1) {
-		//MPL_LOGD("rkvr_add_sensor_data gyro\n");
-		memcpy(rkvr_gyro_data, data, sizeof(rkvr_gyro_data));
-		rkvr_timestamp = timestamp;
-		rkvr_recv_data |= 2;
-	}
-
-	if (rkvr_recv_data==3) {
-		UByte buffer[62] = {0};
-		//MPL_LOGD("rkvr_add_sensor_data out\n");
-		Sensor_Encode(buffer, rkvr_accel_data, rkvr_gyro_data, rkvr_timestamp);
-		ioctl(rkvr_fd, HIDIOCNOTIFY(62), buffer);
-		rkvr_recv_data = 0;
-	}
-}
-
 /** Acceleration (m/s^2) in body frame.
 * @param[out] values Acceleration in m/s^2 includes gravity. So while not in motion, it
 *             should return a vector of magnitude near 9.81 m/s^2
@@ -174,8 +80,6 @@ int inv_get_sensor_type_accelerometer(float *values, int8_t *accuracy,
         status = 1;
     else
         status = 0;
-	//if (status && rkvr_fd>0)
-	//	rkvr_add_sensor_data(values, 0, timestamp);
     return status;
 }
 
@@ -255,8 +159,6 @@ int inv_get_sensor_type_gyroscope(float *values, int8_t *accuracy,
         status = 1;
     else
         status = 0;
-	//if (status && rkvr_fd>0)
-		//rkvr_add_sensor_data(values, 1, timestamp);
     return status;
 }
 
@@ -726,7 +628,6 @@ inv_error_t inv_start_hal_outputs(void)
                              INV_GYRO_NEW | INV_ACCEL_NEW | INV_MAG_NEW);
     return result;
 }
-
 /* file name: lowPassFilterCoeff_1_6.c */
 float compass_low_pass_filter_coeff[5] =
 {+2.000000000000f, +1.000000000000f, -1.279632424998f, +0.477592250073f, +0.049489956269f};
@@ -743,11 +644,6 @@ inv_error_t inv_init_hal_outputs(void)
     for (i=0; i<3; i++)  {
         inv_init_biquad_filter(&hal_out.lp_filter[i], compass_low_pass_filter_coeff);
     }
-
-	if (rkvr_fd<0) {
-		rkvr_fd = open("/dev/ovr0", O_RDWR);
-		MPL_LOGD("rkvr_fd = %d\n", rkvr_fd);
-	}
 
     return INV_SUCCESS;
 }
