@@ -45,7 +45,7 @@ inv_error_t inv_read_cal(unsigned char **calData, size_t *bytesRead)
 
     fp = fopen(MLCAL_FILE,"rb");
     if (fp == NULL) {
-        MPL_LOGE("Cannot open file \"%s\" for read\n", MLCAL_FILE);
+        MPL_LOGE("Cannot open file \"%s\" for read, errno = %d, %s\n", MLCAL_FILE, errno, strerror(errno));
         return INV_ERROR_FILE_OPEN;
     }
 
