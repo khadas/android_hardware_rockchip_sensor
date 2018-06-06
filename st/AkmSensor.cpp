@@ -36,8 +36,6 @@ AkmSensor::AkmSensor()
       mInputReader(32)
 {
     memset(mPendingEvents, 0, sizeof(mPendingEvents));
-    memset(mMagnInsertingEvents, 0, sizeof(mMagnInsertingEvents));
-    mPretimestamp = 0;
 /*
     mPendingEvents[Accelerometer].version = sizeof(sensors_event_t);
     mPendingEvents[Accelerometer].sensor = ID_A;
@@ -56,13 +54,12 @@ AkmSensor::AkmSensor()
 */
     for (int i=0 ; i<numSensors ; i++)
         mDelays[i] = 200000000; // 200 ms by default
-
+/*
     // read the actual value of all sensors if they're enabled already
     struct input_absinfo absinfo;
     short flags = 0;
 
     open_device();
-/*
     if (!ioctl(dev_fd, ECS_IOCTL_APP_GET_AFLAG, &flags)) {
         if (flags)  {
             mEnabled |= 1<<Accelerometer;
@@ -77,7 +74,7 @@ AkmSensor::AkmSensor()
             }
         }
     }
-*/	
+	
     if ((dev_fd > 0) && (!ioctl(dev_fd, ECS_IOCTL_APP_GET_MVFLAG, &flags))) {
         if (flags)  {
             mEnabled |= 1<<MagneticField;
@@ -92,7 +89,6 @@ AkmSensor::AkmSensor()
             }
         }
     }
-/*
     if (!ioctl(dev_fd, ECS_IOCTL_APP_GET_MFLAG, &flags)) {
         if (flags)  {
             mEnabled |= 1<<Orientation;
@@ -110,18 +106,14 @@ AkmSensor::AkmSensor()
             }
         }
     }
-*/
     // disable temperature sensor, since it is not reported
     flags = 0;
     if (dev_fd > 0)
         ioctl(dev_fd, ECS_IOCTL_APP_SET_TFLAG, &flags);
+*/
 }
 
 AkmSensor::~AkmSensor() {
-    if (dev_fd > 0) {
-        close(dev_fd);
-        dev_fd = -1;
-    }
 }
 
 int AkmSensor::enable(int32_t handle, int en)
@@ -140,7 +132,7 @@ int AkmSensor::enable(int32_t handle, int en)
     int err = 0;
 
     if ((uint32_t(newState)<<what) != (mEnabled & (1<<what))) {
-        if (dev_fd < 0) {
+        if (!mEnabled) {
             open_device();
         }
         int cmd;
@@ -156,10 +148,13 @@ int AkmSensor::enable(int32_t handle, int en)
         if (!err) {
             mEnabled &= ~(1<<what);
             mEnabled |= (uint32_t(flags)<<what);
-            //update_delay();
+            update_delay();
         }
    	}
 
+	if ( !mEnabled ) {
+    	close_device();
+	}
 	return err;
 }
 
@@ -190,22 +185,19 @@ int AkmSensor::update_delay()
 {
     int result = 0;
 
-    if (dev_fd < 0) {
-        open_device();
-    }
-
-    uint64_t wanted = -1LLU;
-    for (int i=0 ; i<numSensors ; i++) {
-        if (mEnabled & (1<<i)) {
-            uint64_t ns = mDelays[i];       /* 预期的 delay 设定. */
-            wanted = wanted < ns ? wanted : ns;
+    if (mEnabled) {
+        uint64_t wanted = -1LLU;
+        for (int i=0 ; i<numSensors ; i++) {
+            if (mEnabled & (1<<i)) {
+                uint64_t ns = mDelays[i];
+                wanted = wanted < ns ? wanted : ns;
+            }
+        }
+        short delay = int64_t(wanted) / 1000000;
+        if (ioctl(dev_fd, ECS_IOCTL_APP_SET_DELAY, &delay)) {
+            return -errno;
         }
     }
-    short delay = int64_t(wanted) / 1000000;
-    if (ioctl(dev_fd, ECS_IOCTL_APP_SET_DELAY, &delay)) {
-        return -errno;
-    }
-
     return result;
 }
 
@@ -238,28 +230,15 @@ int AkmSensor::readEvents(sensors_event_t* data, int count)
             processEvent(event->code, event->value);
             mInputReader.next();
         } else if (type == EV_SYN) {    // #define EV_SYN 0x00
+            int64_t time = getTimestamp(); //timevalToNano(event->time);
             for (int j=0 ; count && mPendingMask && j<numSensors ; j++) {
                 if (mPendingMask & (1<<j)) {
                     mPendingMask &= ~(1<<j);
-                    mPendingEvents[j].timestamp = getTimestamp();
+                    mPendingEvents[j].timestamp = time;
                     if (mEnabled & (1<<j)) {
-#ifdef INSERT_FAKE_DATA
-                        if(mPretimestamp == 0)mPretimestamp = mPendingEvents[j].timestamp;
-                        int tmstamp_ms =  nanoseconds_to_milliseconds(mPendingEvents[j].timestamp - mPretimestamp);
-                        int num = tmstamp_ms/INSERT_DUR_MAX;
-                        num -= tmstamp_ms%INSERT_DUR_MAX<INSERT_DUR_MIN? 1: 0;
-                        num = num>=INSERT_FAKE_MAX ? 0 : num;
-                        instertFakeData(num);
-                        for(int k = 0;k<num;k++){
-	                     *data++ = mMagnInsertingEvents[k];
-	                     count--;
-	                     numEventReceived++;
-                        }
-#endif
                         *data++ = mPendingEvents[j];
                         count--;
                         numEventReceived++;
-                        mPretimestamp = mPendingEvents[j].timestamp;
                     }
                 }
             }
@@ -275,23 +254,6 @@ int AkmSensor::readEvents(sensors_event_t* data, int count)
 
     return numEventReceived;
 }
-
-void AkmSensor::instertFakeData(int num){
-    for (int i=num-1; i>=0; i--){
-	    mMagnInsertingEvents[i].version = mPendingEvents[MagneticField].version;
-	    mMagnInsertingEvents[i].sensor = mPendingEvents[MagneticField].sensor;
-	    mMagnInsertingEvents[i].type = mPendingEvents[MagneticField].type;
-	    mMagnInsertingEvents[i].magnetic.status = mPendingEvents[MagneticField].magnetic.status;
-           mMagnInsertingEvents[i].magnetic.x = mPendingEvents[MagneticField].magnetic.x;
-           mMagnInsertingEvents[i].magnetic.y= mPendingEvents[MagneticField].magnetic.y;
-           mMagnInsertingEvents[i].magnetic.z= mPendingEvents[MagneticField].magnetic.z;
-           //usleep(5000);
-           //mMagnInsertingEvents[i].timestamp = getTimestamp();
-           mMagnInsertingEvents[i].timestamp = mPendingEvents[MagneticField].timestamp - INSERT_DUR_MAX*1000000*(num-i);
-           D("hxw mMagnInsertingEvents[%d].timestamp:%ld\n",i,mMagnInsertingEvents[i].timestamp);
-    }
-}
-
 
 void AkmSensor::processEvent(int code, int value)
 {
@@ -310,19 +272,19 @@ void AkmSensor::processEvent(int code, int value)
             mPendingEvents[Accelerometer].acceleration.z = value * CONVERT_A_Z;
             break;
 */
-        case EVENT_TYPE_MAGV_X:
+        case ABS_HAT0X:
             mPendingMask |= 1<<MagneticField;
             mPendingEvents[MagneticField].magnetic.x = value * CONVERT_M_X;
             break;
-        case EVENT_TYPE_MAGV_Y:
+        case ABS_HAT0Y:
             mPendingMask |= 1<<MagneticField;
             mPendingEvents[MagneticField].magnetic.y = value * CONVERT_M_Y;
             break;
-        case EVENT_TYPE_MAGV_Z:
+        case ABS_BRAKE:
             mPendingMask |= 1<<MagneticField;
             mPendingEvents[MagneticField].magnetic.z = value * CONVERT_M_Z;
             break;
-		case EVENT_TYPE_MAGV_STATUS:
+		case ABS_HAT1X:
             mPendingMask |= 1<<MagneticField;
             mPendingEvents[MagneticField].magnetic.status = value;
             break;
