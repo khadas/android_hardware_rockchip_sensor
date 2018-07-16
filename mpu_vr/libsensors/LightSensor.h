@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Samsung
+ * Copyright (C) 2008 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,40 +17,38 @@
 #ifndef ANDROID_LIGHT_SENSOR_H
 #define ANDROID_LIGHT_SENSOR_H
 
-//cvt_zxl add
-#include <linux/types.h>
-#include <linux/ioctl.h>
-//end of cvt_zxl add
-
 #include <stdint.h>
 #include <errno.h>
 #include <sys/cdefs.h>
 #include <sys/types.h>
 
 #include "sensors.h"
-#include "SamsungSensorBase.h"
+#include "SensorBase.h"
 #include "InputEventReader.h"
 
 /*****************************************************************************/
-//cvte_zxl add
-#define LIGHTSENSOR_IOCTL_MAGIC 'l'
-#define LIGHTSENSOR_IOCTL_GET_ENABLED    _IOR(LIGHTSENSOR_IOCTL_MAGIC, 1, int *)
-#define LIGHTSENSOR_IOCTL_ENABLE         _IOW(LIGHTSENSOR_IOCTL_MAGIC, 2, int *)
-#define LIGHTSENSOR_IOCTL_DISABLE        _IOW(LIGHTSENSOR_IOCTL_MAGIC, 3, int *)
-//end of cvte_zxl add
 
 struct input_event;
 
-class LightSensor:public SamsungSensorBase {
+class LightSensor : public SensorBase {
+    int mEnabled;
+    InputEventCircularReader mInputReader;
+    sensors_event_t mPendingEvent;
+    bool mHasPendingEvent;
 
     float mPreviousLight;
-    virtual int handleEnable(int en);
-    virtual bool handleEvent(input_event const * event);
     float indexToValue(size_t index) const;
-public:
-    LightSensor();
-};
+    int setInitialState();
 
+public:
+            LightSensor();
+    virtual ~LightSensor();
+    virtual int readEvents(sensors_event_t* data, int count);
+    virtual bool hasPendingEvents() const;
+    virtual int setDelay(int32_t handle, int64_t ns);
+    virtual int enable(int32_t handle, int enabled);
+    virtual int isActivated(int handle);
+};
 /*****************************************************************************/
 
 #endif  /* ANDROID_LIGHT_SENSOR_H */

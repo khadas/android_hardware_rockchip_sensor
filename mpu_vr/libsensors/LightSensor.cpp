@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Samsung
+ * Copyright (C) 2008 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,70 +22,161 @@
 #include <dirent.h>
 #include <sys/select.h>
 #include <cutils/log.h>
-#include <pthread.h>
 
+#include "isl29028.h"
 #include "LightSensor.h"
 
+/*****************************************************************************/
 LightSensor::LightSensor()
-    : SamsungSensorBase("/dev/lightsensor", "lightsensor-level", ABS_MISC)
+    : SensorBase("/dev/lightsensor", "lightsensor-level"),
+      mEnabled(0),
+      mInputReader(4),
+      mHasPendingEvent(false)
 {
+    mPendingEvent.version = sizeof(sensors_event_t);
     mPendingEvent.sensor = ID_L;
     mPendingEvent.type = SENSOR_TYPE_LIGHT;
-    mPreviousLight = -1;
+    memset(mPendingEvent.data, 0, sizeof(mPendingEvent.data));
+
+    open_device();
+
+    int flags = 0;
+    if (dev_fd > 0) {
+        if (!ioctl(dev_fd, LIGHTSENSOR_IOCTL_GET_ENABLED, &flags)) {
+            if (flags) {
+                mEnabled = 1;
+                setInitialState();
+            }
+        }
+    }
 }
 
-int LightSensor::handleEnable(int en) {
-    mPreviousLight = -1;
-//cvte_zxl add
+LightSensor::~LightSensor() {
+    if (mEnabled) {
+        enable(0, 0);
+    }
+    if (dev_fd > 0) {
+        close(dev_fd);
+        dev_fd = -1;
+    }
+}
+
+int LightSensor::setInitialState() {
+    struct input_absinfo absinfo;
+    if ((data_fd > 0) && (!ioctl(data_fd, EVIOCGABS(ABS_MISC), &absinfo))) {
+        mPendingEvent.light = indexToValue(absinfo.value);
+        if (mPendingEvent.light != mPreviousLight) {
+        	mHasPendingEvent = true;
+             mPreviousLight = mPendingEvent.light;
+        }
+    }
+    return 0;
+}
+
+int LightSensor::setDelay(int32_t /* handle */, int64_t ns)
+{
+    short ms;
+    int ret = -1;
+
+    ms = ns / 1000000;
+
+    if (dev_fd < 0) {
+        open_device();
+    }
+
+    ret = ioctl(dev_fd, LIGHTSENSOR_IOCTL_SET_RATE, &ms);
+    if (ret)
+        LOGE("LIGHTSENSOR_IOCTL_SET_RATE failed\n");
+
+    return ret;
+}
+
+int LightSensor::enable(int32_t, int en) {
     int flags = en ? 1 : 0;
     int err = 0;
+    mPreviousLight = -1;
+
     if (flags != mEnabled) {
-        if (!mEnabled) {
+        if (dev_fd < 0) {
             open_device();
         }
         err = ioctl(dev_fd, LIGHTSENSOR_IOCTL_ENABLE, &flags);
         err = err<0 ? -errno : 0;
-        ALOGE_IF(err, "LIGHTSENSOR_IOCTL_ENABLE failed (%s)", strerror(-err));
+        LOGE_IF(err, "LIGHTSENSOR_IOCTL_ENABLE failed (%s)", strerror(-err));
         if (!err) {
             mEnabled = en ? 1 : 0;
-        }
-        if (!mEnabled) {
-            close_device();
+            if (en) {
+                setInitialState();
+            }
         }
     }
-    return err;
-//end of cvte_zxl add
+    return 0;
 }
 
-bool LightSensor::handleEvent(input_event const *event) {
-    if (event->value == -1) {
-        return false;
-    }
-    mPendingEvent.light = indexToValue(event->value);
-   // mPendingEvent.light = event->value;
-    if (mPendingEvent.light != mPreviousLight) {
-        mPreviousLight = mPendingEvent.light;
-        return true;
-    }
-    return true;
+int LightSensor::isActivated(int /* handle */)
+{
+    return mEnabled;
 }
 
-//cvt_zxl modify
-float LightSensor::indexToValue(size_t index) const {
-    /* Driver gives a rolling average adc value.  We convert it lux levels. */
-    static const float lux_value[] = {
-          33.0,
-          66.0,
-          108.0,
-          192.0,
-          365.0,
-          720.0,
-          1080.0,
-          1440.0,
+bool LightSensor::hasPendingEvents() const {
+    return mHasPendingEvent;
+}
+
+int LightSensor::readEvents(sensors_event_t* data, int count)
+{
+    if (count < 1)
+        return -EINVAL;
+
+    if (mHasPendingEvent) {
+        mHasPendingEvent = false;
+        mPendingEvent.timestamp = getTimestamp();
+        *data = mPendingEvent;
+        return mEnabled ? 1 : 0;
+    }
+
+    ssize_t n = mInputReader.fill(data_fd);
+    if (n < 0)
+        return n;
+
+    int numEventReceived = 0;
+    input_event const* event;
+
+    while (count && mInputReader.readEvent(&event)) {
+        int type = event->type;
+        if (type == EV_ABS) {
+            if (event->code == ABS_MISC) {
+                if (event->value != -1) {
+                    // FIXME: not sure why we're getting -1 sometimes
+                    mPendingEvent.light = indexToValue(event->value);
+                }
+            }
+        } else if (type == EV_SYN) {
+            mPendingEvent.timestamp = getTimestamp();
+            if (mEnabled && (mPendingEvent.light != mPreviousLight)) {
+                *data++ = mPendingEvent;
+                count--;
+                numEventReceived++;
+                mPreviousLight = mPendingEvent.light;
+            }
+        } else {
+            LOGE("LightSensor: unknown event (type=%d, code=%d)",
+                    type, event->code);
+        }
+        mInputReader.next();
+    }
+
+    return numEventReceived;
+}
+
+float LightSensor::indexToValue(size_t index) const
+{
+    static const float luxValues[8] = {
+            10.0, 160.0, 225.0, 320.0,
+            640.0, 1280.0, 2600.0, 10240.0
     };
-    if (index < 0 || index > ARRAY_SIZE(lux_value) - 1) {
-        index = 7;
-    }
-    return lux_value[index];
+
+    const size_t maxIndex = sizeof(luxValues)/sizeof(*luxValues) - 1;
+    if (index > maxIndex)
+        index = maxIndex;
+    return luxValues[index];
 }
-//end of cvt_zxl modify

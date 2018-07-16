@@ -163,7 +163,7 @@ sensors_poll_context_t::sensors_poll_context_t() {
 	sSensorList[LOCAL_SENSORS-2].maxRange   = 10240.0f;
 	sSensorList[LOCAL_SENSORS-2].resolution = 1.0f;
 	sSensorList[LOCAL_SENSORS-2].power      = 0.5f;
-	sSensorList[LOCAL_SENSORS-2].minDelay   = 20000;
+	sSensorList[LOCAL_SENSORS-2].minDelay   = 7000;
 
         sSensorList[LOCAL_SENSORS-2].fifoReservedEventCount   = 0;
         sSensorList[LOCAL_SENSORS-2].fifoMaxEventCount   = 0;
@@ -181,7 +181,7 @@ sensors_poll_context_t::sensors_poll_context_t() {
 	sSensorList[LOCAL_SENSORS-1].type		= SENSOR_TYPE_PROXIMITY;
 	sSensorList[LOCAL_SENSORS-1].maxRange	= 9.0f;
 	sSensorList[LOCAL_SENSORS-1].power		= 0.5f;
-	sSensorList[LOCAL_SENSORS-1].minDelay	= 10000;
+	sSensorList[LOCAL_SENSORS-1].minDelay	= 7000;
 
         sSensorList[LOCAL_SENSORS-1].fifoReservedEventCount   = 0;
         sSensorList[LOCAL_SENSORS-1].fifoMaxEventCount   = 0;
