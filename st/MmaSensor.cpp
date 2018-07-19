@@ -65,7 +65,7 @@ int MmaSensor::enable(int32_t /* handle */, int en)
     int newState  = en ? 1 : 0;
     int err = 0;
 
-    if (mEnabled != newState) {
+    if ((int)mEnabled != newState) {
         if (dev_fd < 0) {
             open_device();
         }

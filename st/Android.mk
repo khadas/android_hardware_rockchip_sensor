@@ -7,10 +7,12 @@ include $(CLEAR_VARS)
 LOCAL_MULTILIB := both
 
 LOCAL_CFLAGS += \
-	-Wno-unused-parameter
+	-Wno-unused-parameter \
+	-Wformat
 
 LOCAL_CPPFLAGS += \
-	-Wno-unused-parameter
+	-Wno-unused-parameter \
+	-Wformat
 
 ifeq ($(BOARD_GRAVITY_SENSOR_SUPPORT), true)
 LOCAL_CFLAGS += -DGRAVITY_SENSOR_SUPPORT
@@ -43,6 +45,9 @@ endif
 LOCAL_MODULE := sensors.$(TARGET_BOARD_HARDWARE)
 LOCAL_PROPRIETARY_MODULE := true
 LOCAL_MODULE_RELATIVE_PATH := hw
+
+LOCAL_HEADER_LIBRARIES += \
+    libhardware_headers
 
 LOCAL_MODULE_TAGS := optional
 

@@ -273,7 +273,7 @@ int sensors_poll_context_t::pollEvents(sensors_event_t* data, int count)
                         tm_count++;
                         //LOGI("tm_count = %d\n", tm_count);
                         if ((tm_cur-tm_last_print) > 1000000000) {
-                            LOGD("ST HAL report rate[%4lld]: %8lld, %8lld, %8lld\n", tm_count, tm_min, (tm_sum/tm_count), tm_max);
+                            LOGD("ST HAL report rate[%4lld]: %8lld, %8lld, %8lld\n", (long long)tm_count, (long long)tm_min, (long long)(tm_sum/tm_count), (long long)tm_max);
                             tm_last_print = tm_cur;
                             tm_min = tm_max = tm_count = tm_sum = 0;
                         }
@@ -282,13 +282,13 @@ int sensors_poll_context_t::pollEvents(sensors_event_t* data, int count)
                     if (debug_lvl > 0) {
                         for (int j=0; j<nb; j++) {
                             if ((debug_lvl&1) && data[j].sensor==ID_GY) {
-                                LOGD("GYRO: %+f %+f %+f - %lld", data[j].gyro.x, data[j].gyro.y, data[j].gyro.z, data[j].timestamp);
+                                LOGD("GYRO: %+f %+f %+f - %lld", data[j].gyro.x, data[j].gyro.y, data[j].gyro.z, (long long)data[j].timestamp);
                             }
                             if ((debug_lvl&2) && data[j].sensor==ID_A) {
-                                LOGD("ACCL: %+f %+f %+f - %lld", data[j].acceleration.x, data[j].acceleration.y, data[j].acceleration.z, data[j].timestamp);
+                                LOGD("ACCL: %+f %+f %+f - %lld", data[j].acceleration.x, data[j].acceleration.y, data[j].acceleration.z, (long long)data[j].timestamp);
                             }
                             if ((debug_lvl&4) && (data[j].sensor==ID_M)) {
-                                LOGD("MAG: %+f %+f %+f - %lld", data[j].magnetic.x, data[j].magnetic.y, data[j].magnetic.z, data[j].timestamp);
+                                LOGD("MAG: %+f %+f %+f - %lld", data[j].magnetic.x, data[j].magnetic.y, data[j].magnetic.z, (long long)data[j].timestamp);
                             }
                         }
                     }
@@ -336,7 +336,7 @@ static int poll__setDelay(struct sensors_poll_device_t *dev,
         int handle, int64_t ns) {
     sensors_poll_context_t *ctx = (sensors_poll_context_t *)dev;
 
-    LOGI("set delay: handle = %d, delay = %dns\n", handle, ns);
+    LOGI("set delay: handle = %d, delay = %dns\n", handle, (int)ns);
 
     return ctx->setDelay(handle, ns);
 }
@@ -350,7 +350,7 @@ static int poll__poll(struct sensors_poll_device_t *dev,
 static int poll__batch(struct sensors_poll_device_1 *dev,
                       int handle, int flags, int64_t period_ns, int64_t timeout)
 {
-    LOGI("set batch: handle = %d, period_ns = %dns, timeout = %dns\n", handle, period_ns, timeout);
+    LOGI("set batch: handle = %d, period_ns = %dns, timeout = %dns\n", handle, (int)period_ns, (int)timeout);
 
     sensors_poll_context_t *ctx = (sensors_poll_context_t *)dev;
     return ctx->setDelay(handle, period_ns);
