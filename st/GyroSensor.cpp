@@ -22,7 +22,6 @@
 #include <dirent.h>
 #include <math.h>
 #include <sys/select.h>
-#include <cutils/log.h>
 #include <utils/BitSet.h>
 #include <cutils/properties.h>
 #include "l3g4200d.h"

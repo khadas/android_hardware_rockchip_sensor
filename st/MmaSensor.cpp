@@ -23,7 +23,6 @@
 #include <sys/select.h>
 #include <stdio.h>
 #include <math.h>
-#include <cutils/log.h>
 
 #include "MmaSensor.h"
 #include "mma8452_kernel.h"
