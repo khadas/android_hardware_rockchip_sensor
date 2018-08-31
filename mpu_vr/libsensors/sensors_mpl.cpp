@@ -531,7 +531,7 @@ static int poll__activate(struct sensors_poll_device_t *dev,
 #endif
 
     char propbuf[PROPERTY_VALUE_MAX];
-    property_get("sensor.debug.level", propbuf, "0");
+    property_get("vendor.sensor.debug.level", propbuf, "0");
     debug_lvl = atoi(propbuf);
 
     LOGI("set active: handle = %d, enable = %d\n", handle, enabled);
@@ -643,7 +643,7 @@ static int open_sensors(const struct hw_module_t* module, const char* id,
     memset(sensor_prev_time, 0, 32*sizeof(int64_t));
 #endif
 
-    property_get("sensor.debug.time", propbuf, "0");
+    property_get("vendor.sensor.debug.time", propbuf, "0");
     debug_time = atoi(propbuf);
 
     return status;

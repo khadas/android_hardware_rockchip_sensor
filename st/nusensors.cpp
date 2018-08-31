@@ -322,11 +322,11 @@ static int poll__activate(struct sensors_poll_device_t *dev,
     LOGI("set active: handle = %d, enable = %d\n", handle, enabled);
 
     char propbuf[PROPERTY_VALUE_MAX];
-    property_get("sensor.debug.level", propbuf, "0");
+    property_get("vendor.sensor.debug.level", propbuf, "0");
     debug_lvl = atoi(propbuf);
 
     memset(propbuf, 0, sizeof(propbuf));
-    property_get("sensor.debug.time", propbuf, "0");
+    property_get("vendor.sensor.debug.time", propbuf, "0");
     debug_time = atoi(propbuf);
 
     return ctx->activate(handle, enabled);

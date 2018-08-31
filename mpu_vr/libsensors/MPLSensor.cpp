@@ -2066,7 +2066,7 @@ int MPLSensor::setDelay(int32_t handle, int64_t ns)
         return -EINVAL;
 
     char propbuf[PROPERTY_VALUE_MAX];
-    property_get("sensor.debug.maxrate", propbuf, "1000");
+    property_get("vendor.sensor.debug.maxrate", propbuf, "1000");
     static int64_t max_rate = 1000000000LL/atoi(propbuf);
     //LOGD("max rate: %lld\n", max_rate);
     // limit all rates to reasonable ones */
