@@ -26,6 +26,7 @@ LOCAL_SRC_FILES:= \
 
 LOCAL_MODULE  := akmd
 LOCAL_PROPRIETARY_MODULE := true
+LOCAL_CFLAGS  += -Wno-error -Wno-implicit-function-declaration
 
 ifeq ($(AKMD_DEVICE_TYPE), 8963)
 LOCAL_SRC_FILES += FST_AK8963.c

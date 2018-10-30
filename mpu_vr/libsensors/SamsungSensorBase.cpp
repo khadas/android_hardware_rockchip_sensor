@@ -19,6 +19,7 @@
 #include <math.h>
 #include <poll.h>
 #include <fcntl.h>
+#include <stdio.h>
 #include <unistd.h>
 #include <dirent.h>
 #include <sys/select.h>

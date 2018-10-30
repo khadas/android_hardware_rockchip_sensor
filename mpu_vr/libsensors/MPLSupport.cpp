@@ -20,7 +20,7 @@
 #include "log.h"
 #include "SensorBase.h"
 #include <fcntl.h>
-
+#include <unistd.h>
 #include "ml_sysfs_helper.h"
 
 int inv_read_data(char *fname, long *data)

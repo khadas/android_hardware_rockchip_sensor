@@ -18,10 +18,12 @@
 #define ANDROID_SENSOR_BASE_H
 
 #include <stdint.h>
+#include <unistd.h>
 #include <string.h>
 #include <errno.h>
 #include <sys/cdefs.h>
 #include <sys/types.h>
+#include <limits.h>
 
 //--yd #if defined ANDROID_JELLYBEAN || defined ANDROID_KITKAT
 #if defined ANDROID_JELLYBEAN || defined ANDROID_KITKAT || defined ANDROID_LOLLIPOP
