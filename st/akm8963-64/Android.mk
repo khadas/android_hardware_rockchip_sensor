@@ -1,14 +1,20 @@
 ifeq (${TARGET_ARCH},arm64)
 ifneq ($(TARGET_SIMULATOR),true)
 
+BOARD_SENSOR_COMPASS_AK09911 := false
+
 LOCAL_PATH:= $(call my-dir)
 
+ifeq ($(strip $(BOARD_SENSOR_COMPASS_AK09911)), true)
+AKMD_DEVICE_TYPE := 9911
+else
 AKMD_DEVICE_TYPE := 8963
+endif
 AKMD_ACC_AOT := yes
 
 include $(CLEAR_VARS)
 LOCAL_C_INCLUDES := \
-	$(LOCAL_PATH)
+        $(LOCAL_PATH)
 
 LOCAL_SRC_FILES:= \
 	AKMD_Driver.c \
@@ -16,16 +22,16 @@ LOCAL_SRC_FILES:= \
 	FileIO.c \
 	Measure.c \
 	main.c \
-	misc.c	\
-	Acc_mma8452.c
+	misc.c
 
 LOCAL_MODULE  := akmd
 LOCAL_PROPRIETARY_MODULE := true
+LOCAL_CFLAGS  += -Wno-error -Wno-implicit-function-declaration
 
 ifeq ($(AKMD_DEVICE_TYPE), 8963)
 LOCAL_SRC_FILES += FST_AK8963.c
 LOCAL_CFLAGS  += -DAKMD_FOR_AK8963
-#LOCAL_LDFLAGS += -L$(LOCAL_PATH)/$(SMARTCOMPASS_LIB) -lAK8963wPGplus
+#LOCAL_LDFLAGS += $(LOCAL_PATH)/libAK8963wPGplus.a
 LOCAL_STATIC_LIBRARIES := libAK8963wPGplus
 
 else ifeq ($(AKMD_DEVICE_TYPE), 8975)
@@ -75,7 +81,7 @@ LOCAL_CFLAGS += -Wall -Wextra
 #LOCAL_CFLAGS += -DAKM_LOG_ENABLE
 
 LOCAL_MODULE_TAGS := optional
-LOCAL_FORCE_STATIC_EXECUTABLE := false
+LOCAL_FORCE_STATIC_EXECUTABLE := false 
 LOCAL_SHARED_LIBRARIES := libc libm libutils libcutils liblog
 include $(BUILD_EXECUTABLE)
 

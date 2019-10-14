@@ -30,7 +30,11 @@
 
 // Certification information
 #define CSPEC_CI_LICENSER	"ASAHIKASEI"
+#ifdef AKMD_FOR_AK09911
+#define CSPEC_CI_LICENSEE	"RC_11_V7_AR_64"
+#else
 #define CSPEC_CI_LICENSEE	"RC_63_V7_AR_64"
+#endif
 
 // Parameters for Average
 //  The number of magnetic data to be averaged.
@@ -66,7 +70,7 @@
 #define CSPEC_NSF				0x40
 
 // Setting file
-#define CSPEC_SETTING_FILE	"/data/misc/akmd/akmd_set.txt"
+#define CSPEC_SETTING_FILE	"/data/misc/akmd_set.txt"
 #define CSPEC_PDC_FILE		"/data/misc/pdc.txt"
 
 // DOEPlus(software softiron distortion compensation) Enable(1)/Disable(0)

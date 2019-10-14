@@ -186,7 +186,7 @@ void Disp_MeasurementResultHook(AKSCPRMS* prms, const uint16 flag)
 void Disp_MeasurementResultHook(AKSCPRMS* prms, const uint16 flag)
 {
 	if (!g_opmode) {
-		int32_t rbuf[AKM_YPR_DATA_SIZE] = { 0 };
+		int rbuf[AKM_YPR_DATA_SIZE] = { 0 };
 	int16_t totalHDST = 0;
 	/* Adjust magnetic reliability based on the level of each algorithm */
 	if (prms->m_en_doeplus == 1) {
@@ -211,17 +211,13 @@ void Disp_MeasurementResultHook(AKSCPRMS* prms, const uint16 flag)
 	rbuf[2] = prms->m_avec.u.y;	/* Ay */
 	rbuf[3] = prms->m_avec.u.z;	/* Az */
 	rbuf[4] = 3;					/* Acc status */
-
 	rbuf[5] = prms->m_hvec.u.x;	/* Mx */
 	rbuf[6] = prms->m_hvec.u.y;	/* My */
 	rbuf[7] = prms->m_hvec.u.z;	/* Mz */
 	rbuf[8] = totalHDST;		/* Mag status */
-
-	rbuf[9] = prms->m_theta;	/* yaw  (deprecate) x*/
+	rbuf[9] = prms->m_theta;		/* yaw	(deprecate) x*/
 	rbuf[10] = prms->m_phi180;	/* pitch (deprecate) y*/
-	rbuf[11] = prms->m_eta90;	/* roll  (deprecate) z*/
-	rbuf[12] = 3;
-
+	rbuf[11] = prms->m_eta90;		/* roll  (deprecate) z*/
 		AKD_SetYPR(rbuf);
 	} else {
 		Disp_MeasurementResult(prms);

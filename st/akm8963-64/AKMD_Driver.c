@@ -29,7 +29,12 @@
 #define AKM_MEASURE_RETRY_NUM	5
 int s_fdDev = -1;
 
+#ifdef AKMD_FOR_AK09911
+#define MSENSOR_NAME      "/dev/akm_dev"
+#else
 #define MSENSOR_NAME      "/dev/akm8963_dev"
+#endif
+
 #define GSENSOR_NAME      "/dev/gsensor"
 int g_file_acc = -1;
 
@@ -95,7 +100,7 @@ int16_t AKD_InitDevice(void)
 			goto INIT_FAIL;
 		}
 	}
-#if 1
+#if 0
 	if (Acc_InitDevice() != AKD_SUCCESS) {
 		goto INIT_FAIL;
 	}
@@ -128,9 +133,8 @@ void AKD_DeinitDevice(void)
 		close(s_fdDev);
 		s_fdDev = -1;
 	}
-
-	Acc_DeinitDevice();
 #if 0
+	//Acc_DeinitDevice();
 	if (g_file_acc >= 0) {
 		close(g_file_acc);
 		g_file_acc = -1;
@@ -473,6 +477,7 @@ int16_t AKD_GetLayout(int16_t* layout)
 	}
 
 	*layout = tmp;
+	ALOGE("%s: layout=%d\n", __FUNCTION__, tmp);
 
 	return AKD_SUCCESS;
 }
@@ -480,26 +485,80 @@ int16_t AKD_GetLayout(int16_t* layout)
 /*!  */
 int16_t AKD_AccSetEnable(int8_t enabled)
 {
-	return Acc_SetEnable(enabled);
+	//return Acc_SetEnable(enabled);
+	return AKD_SUCCESS;
 }
 
 /*!  */
 int16_t AKD_AccSetDelay(int64_t delay)
 {
-	return Acc_SetDelay(delay);
+	//return Acc_SetDelay(delay);
+	return AKD_SUCCESS;
+}
+
+/*!
+ Convert Acceleration sensor coordinate system from Android's one to AK's one.
+ In Android coordinate system, 1G = 9.8f (m/s^2). In AK coordinate system, 
+ 1G = 720 (LSB).
+ @param[in] fData A acceleration data array. The coordinate system of this data 
+ should follows the definition of Android.
+ @param[out] data A acceleration data array. The coordinate system of the 
+ acquired data follows the definition of AK. 
+ */
+void Android2AK(int fData[], int16_t data[3])
+{
+/*
+	data[0] = fData[1] / 9.8f * -720;
+	data[1] = fData[0] / 9.8f * 720;
+	data[2] = fData[2] / 9.8f * -720;
+*/
+// data[] is mg unit, so data[] / 9800 * 720 = data[]  *72 /980
+	#if 0
+	data[0] = fData[1] * 72 / -980;
+	data[1] = fData[0] * 72 / 980;
+	data[2] = fData[2] * 72 / -980;
+	AKMDEBUG(AKMDBG_MAGDRV, "Get gsensor data %d, %d, %d.\n", data[0], data[1], data[2]);
+	#else  //for AK8963C LIB
+	data[0] = fData[0] * 72 / 980;
+	data[1] = fData[1] * 72 / 980;
+	data[2] = fData[2] * 72 / 980;
+	AKMDEBUG(AKMDBG_MAGDRV, "Get gsensor data %d, %d, %d.\n", data[0], data[1], data[2]);
+	#endif
+
 }
 
 /*!  */
 int16_t AKD_GetAccelerationData(int16_t data[3])
 {
-	return Acc_GetAccData(data);
+//	return Acc_GetAccData(data);
 
+#if 0
+	int fData[3];
+	char buf[64];
+	if(ioctl(g_file_acc, GSENSOR_IOCTL_READ_SENSORDATA, (void*)buf) < 0)
+	{
+		AKMDEBUG(AKMDBG_MAGDRV, "Get gsensor data error.\n");
+		return AKD_FAIL;
+	}
+	else
+	{		
+		sscanf(buf, "%x %x %x", &fData[0], &fData[1], &fData[2]);
+		Android2AK(fData, data);
+		return AKD_SUCCESS;
+	}
+#else
+	return AKD_SUCCESS;
+#endif
 }
 
 /*!  */
 int16_t AKD_GetAccelerationOffset(int16_t offset[3])
 {
-	return Acc_GetAccOffset(offset);
+	//return Acc_GetAccOffset(offset);
+	offset[0] = 0;
+	offset[1] = 0;
+	offset[2] = 0;
+	return AKD_SUCCESS;
 }
 
 /*!  */
@@ -508,6 +567,9 @@ void AKD_GetAccelerationVector(
 	const int16_t offset[3],
 	int16_t vec[3])
 {
-	Acc_GetAccVector(data, offset, vec);
+	//Acc_GetAccVector(data, offset, vec);
+	vec[0] = (int16_t)(data[0] - offset[0]);
+	vec[1] = (int16_t)(data[1] - offset[1]);
+	vec[2] = (int16_t)(data[2] - offset[2]);
 }
 
