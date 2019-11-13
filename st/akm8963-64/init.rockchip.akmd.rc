@@ -1,0 +1,3 @@
+service akmd /vendor/bin/akmd
+    class main
+    oneshot
