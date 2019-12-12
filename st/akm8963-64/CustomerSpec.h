@@ -70,8 +70,8 @@
 #define CSPEC_NSF				0x40
 
 // Setting file
-#define CSPEC_SETTING_FILE	"/data/misc/akmd_set.txt"
-#define CSPEC_PDC_FILE		"/data/misc/pdc.txt"
+#define CSPEC_SETTING_FILE	"/data/vendor/akmd/akmd_set.txt"
+#define CSPEC_PDC_FILE		"/data/vendor/akmd/pdc.txt"
 
 // DOEPlus(software softiron distortion compensation) Enable(1)/Disable(0)
 #define CSPEC_ENABLE_DOEPLUS	1
