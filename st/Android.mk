@@ -3,6 +3,24 @@ LOCAL_PATH := $(call my-dir)
 # HAL module implemenation, not prelinked, and stored in
 # hw/<SENSORS_HARDWARE_MODULE_ID>.<ro.product.board>.so
 include $(CLEAR_VARS)
+LOCAL_MODULE := MemsicAccCali
+LOCAL_MODULE_CLASS := STATIC_LIBRARIES
+LOCAL_PROPRIETARY_MODULE := true
+LOCAL_SRC_FILES := memsic_library/32-bits/MemsicAcclib.a
+LOCAL_MULTILIB := 32
+LOCAL_MODULE_SUFFIX := .a
+include $(BUILD_PREBUILT)
+
+include $(CLEAR_VARS)
+LOCAL_MODULE := MemsicAccCali
+LOCAL_MODULE_CLASS := STATIC_LIBRARIES
+LOCAL_PROPRIETARY_MODULE := true
+LOCAL_SRC_FILES := memsic_library/64-bits/MemsicAcclib.a
+LOCAL_MULTILIB := 64
+LOCAL_MODULE_SUFFIX := .a
+include $(BUILD_PREBUILT)
+
+include $(CLEAR_VARS)
 
 LOCAL_MULTILIB := both
 
@@ -16,6 +34,10 @@ LOCAL_CPPFLAGS += \
 
 ifeq ($(BOARD_GRAVITY_SENSOR_SUPPORT), true)
 LOCAL_CFLAGS += -DGRAVITY_SENSOR_SUPPORT
+endif
+
+ifeq ($(BOARD_GSENSOR_MXC6655XA_SUPPORT), true)
+LOCAL_CFLAGS += -DGSENSOR_MXC6655XA_SUPPORT
 endif
 
 ifeq ($(BOARD_COMPASS_SENSOR_SUPPORT), true)
@@ -71,6 +93,8 @@ LOCAL_SHARED_LIBRARIES := \
 	liblog \
 	libcutils \
 	libutils
+
+LOCAL_STATIC_LIBRARIES := MemsicAccCali
 
 include $(BUILD_SHARED_LIBRARY)
 

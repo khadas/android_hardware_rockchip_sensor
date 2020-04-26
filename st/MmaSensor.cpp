@@ -27,6 +27,11 @@
 #include "MmaSensor.h"
 #include "mma8452_kernel.h"
 
+extern "C"
+{
+    #include "AccCali.h"
+}
+
 /*****************************************************************************/
 
 MmaSensor::MmaSensor()
@@ -154,6 +159,7 @@ int MmaSensor::readEvents(sensors_event_t* data, int count)
 
 void MmaSensor::processEvent(int code, int value)
 {
+#ifndef GSENSOR_MXC6655XA_SUPPORT
     switch (code) {
         case EVENT_TYPE_ACCEL_X:
             mPendingEvent.acceleration.x = (value - accel_offset[0]) * ACCELERATION_RATIO_ANDROID_TO_HW;
@@ -165,6 +171,30 @@ void MmaSensor::processEvent(int code, int value)
             mPendingEvent.acceleration.z = (value - accel_offset[2]) * ACCELERATION_RATIO_ANDROID_TO_HW;
             break;
     }
+#else
+   static float fAccRawData[3] = {0.0};
+   float dataOut[3] = {0.0};
+   int returnFlag = 0;
+
+   switch (code) {
+       case EVENT_TYPE_ACCEL_X:
+           mPendingEvent.acceleration.x = (value - accel_offset[0]) * ACCELERATION_RATIO_ANDROID_TO_HW;
+           fAccRawData[0]=mPendingEvent.acceleration.x / 9.80665;
+           break;
+       case EVENT_TYPE_ACCEL_Y:
+           mPendingEvent.acceleration.y = (value - accel_offset[1]) * ACCELERATION_RATIO_ANDROID_TO_HW;
+           fAccRawData[1]=mPendingEvent.acceleration.y / 9.80665;
+           break;
+       case EVENT_TYPE_ACCEL_Z:
+           fAccRawData[2] =(value - accel_offset[2]) * ACCELERATION_RATIO_ANDROID_TO_HW / 9.80665;
+           returnFlag = DynamicCali(fAccRawData, dataOut);
+           if(returnFlag==2)
+             LOGE("mxc4005 neet to handle aoz ");
+           mPendingEvent.acceleration.z = dataOut[2] * 9.80665;
+           break;
+   }
+#endif
+
 }
 
 void MmaSensor::readCalibration()
