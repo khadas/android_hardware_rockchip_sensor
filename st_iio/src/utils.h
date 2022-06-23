@@ -60,6 +60,7 @@ typedef enum {
 	DEVICE_IIO_TAP_TAP = 34,
 	DEVICE_IIO_WRIST_TILT_GESTURE = 35,
 	DEVICE_IIO_GESTURE = 36,
+	DEVICE_IIO_CCT = 37,
 } device_iio_chan_type_t;
 
 /*

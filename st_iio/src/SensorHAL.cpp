@@ -49,6 +49,7 @@
 #include "Gesture.h"
 #include "DeviceOrientation.h"
 #include "Proximity.h"
+#include "CorrelatedColorTemp.h"
 #include "utils.h"
 
 #ifdef CONFIG_ST_HAL_DYNAMIC_SENSOR
@@ -690,6 +691,12 @@ static const struct ST_sensors_supported {
 	ST_HAL_NEW_SENSOR_SUPPORTED(ST_SENSORS_LIST_49, SENSOR_TYPE_PROXIMITY, DEVICE_IIO_PROXIMITY,"VL6180 Proximity Sensor", 9.0f)
 #endif /* CONFIG_ST_HAL_VL6180_ENABLED */
 #endif /* CONFIG_ST_HAL_PROXIMITY_ENABLED */
+
+#ifdef CONFIG_ST_HAL_CCT_ENABLED
+#ifdef CONFIG_ST_HAL_UCS12CM0_ENABLED
+	ST_HAL_NEW_SENSOR_SUPPORTED(ST_SENSORS_LIST_50, SENSOR_TYPE_CCT, DEVICE_IIO_CCT, "UCS12CM0 color-based Light Sensor", 9.0f)
+#endif /* CONFIG_ST_HAL_UCS12CM0_ENABLED */
+#endif /* CONFIG_ST_HAL_CCT_ENABLED */
 };
 
 /*
@@ -1032,6 +1039,14 @@ static SensorBase* st_hal_create_class_sensor(STSensorHAL_iio_devices_data *data
 			      data->wake_up_sensor);
 		break;
 #endif /* CONFIG_ST_HAL_PROXIMITY_ENABLED */
+#ifdef CONFIG_ST_HAL_CCT_ENABLED
+	case SENSOR_TYPE_CCT:
+		sb = new CorrelatedColorTemp(&class_data, data->android_name, &data->sfa,
+				handle, data->hw_fifo_len,
+				data->power_consumption,
+				data->wake_up_sensor);
+		break;
+#endif /* CONFIG_ST_HAL_CCT_ENABLED */
 	default:
 		return NULL;
 	}
@@ -1214,7 +1229,8 @@ static int st_hal_load_iio_devices_data(STSensorHAL_iio_devices_data *data)
 #endif /* CONFIG_ST_HAL_ANDROID_VERSION */
 
 		    ST_sensors_supported[n].android_sensor_type != SENSOR_TYPE_GLANCE_GESTURE &&
-		    ST_sensors_supported[n].android_sensor_type != SENSOR_TYPE_PROXIMITY) {
+		    ST_sensors_supported[n].android_sensor_type != SENSOR_TYPE_PROXIMITY &&
+		    ST_sensors_supported[n].android_sensor_type != SENSOR_TYPE_CCT) {
 			err = device_iio_utils::get_sampling_frequency_available(data[index].iio_sysfs_path, &data[index].sfa);
 			if (err < 0) {
 				ALOGE("\"%s\": unable to get sampling frequency availability. (errno: %d)", iio_devices[i].name, err);
