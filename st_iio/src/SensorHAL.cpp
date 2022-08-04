@@ -50,6 +50,7 @@
 #include "DeviceOrientation.h"
 #include "Proximity.h"
 #include "CorrelatedColorTemp.h"
+#include "SWLight.h"
 #include "utils.h"
 
 #ifdef CONFIG_ST_HAL_DYNAMIC_SENSOR
@@ -745,6 +746,9 @@ static const struct ST_virtual_sensors_list {
 #if defined(CONFIG_ST_HAL_ACCEL_UNCALIB_AP_ENABLED) || defined(CONFIG_ST_HAL_ACCEL_UNCALIB_AP_EMULATED)
 	{ .android_sensor_type = SENSOR_TYPE_ACCELEROMETER_UNCALIBRATED },
 #endif /* CONFIG_ST_HAL_ACCEL_UNCALIB_AP_ENABLED */
+#if defined(CONFIG_ST_HAL_SW_LIGHT_ENABLED)
+	{ .android_sensor_type = SENSOR_TYPE_LIGHT },
+#endif /* CONFIG_ST_HAL_SW_LIGHT_ENABLED */
 };
 
 #ifdef CONFIG_ST_HAL_FACTORY_CALIBRATION
@@ -843,6 +847,11 @@ static SensorBase* st_hal_create_virtual_class_sensor(int sensor_type, int handl
 		sb = new SWAccelerometerUncalibrated("Accelerometer Uncalibrated Sensor", handle);
 		break;
 #endif /* CONFIG_ST_HAL_ACCEL_UNCALIB_AP_ENABLED */
+#if defined(CONFIG_ST_HAL_SW_LIGHT_ENABLED)
+	case SENSOR_TYPE_LIGHT:
+		sb = new SWLight("Light Sensor", handle);
+		break;
+#endif /* CONFIG_ST_HAL_SW_LIGHT_ENABLED */
 	default:
 		(void)handle;
 		return NULL;
@@ -1230,7 +1239,8 @@ static int st_hal_load_iio_devices_data(STSensorHAL_iio_devices_data *data)
 
 		    ST_sensors_supported[n].android_sensor_type != SENSOR_TYPE_GLANCE_GESTURE &&
 		    ST_sensors_supported[n].android_sensor_type != SENSOR_TYPE_PROXIMITY &&
-		    ST_sensors_supported[n].android_sensor_type != SENSOR_TYPE_CCT) {
+		    ST_sensors_supported[n].android_sensor_type != SENSOR_TYPE_CCT &&
+		    ST_sensors_supported[n].android_sensor_type != SENSOR_TYPE_LIGHT) {
 			err = device_iio_utils::get_sampling_frequency_available(data[index].iio_sysfs_path, &data[index].sfa);
 			if (err < 0) {
 				ALOGE("\"%s\": unable to get sampling frequency availability. (errno: %d)", iio_devices[i].name, err);

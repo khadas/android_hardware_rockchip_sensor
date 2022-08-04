@@ -99,6 +99,11 @@ void CorrelatedColorTemp::ProcessData(SensorBaseData *data)
 	Y = red * Y_A + green * Y_B + blue * Y_C;
 	Z = red * Z_A + green * Z_B + blue * Z_C;
 
+#ifdef CONFIG_ST_HAL_SW_LIGHT_ENABLED
+	/* NOTE: Pass the illumination in Lux to dependency */
+	data->processed[0] = Y;
+#endif /* CONFIG_ST_HAL_SW_LIGHT_ENABLED */
+
 	/* Calculate CIE xyY */
 	x = X / (X + Y + Z);
 	y = Y / (X + Y + Z);
