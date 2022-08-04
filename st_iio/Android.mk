@@ -149,8 +149,6 @@ ifeq ($(MAKECMDGOALS),)
 MAKECMDGOALS := all_modules
 endif
 
-ifeq ($(filter sensors-defconfig sensors-menuconfig sensors-cleanconf,$(MAKECMDGOALS)),)
-ifeq ("$(wildcard $(KCONFIG_CONFIG_HAL))","")
 $(warning ${\n}${\n}${\space}${\n})
 $(warning ${\n}Defconfig file not found. Using default one: `$(DEFCONFIG)`)
 $(warning ${\n}If you want to change HAL configuration please follow the steps below:${\n})
@@ -160,9 +158,7 @@ $(warning ${\n}PLATFORM_VERSION=$(PLATFORM_VERSION) make sensors-menuconfig${\n}
 $(warning ${\n}${\n}${\space}${\n})
 $(shell cp $(CURRENT_DIRECTORY)/src/$(DEFCONFIG) $(KCONFIG_CONFIG_HAL))
 $(shell $(CURRENT_DIRECTORY)/tools/mkconfig $(CURRENT_DIRECTORY)/ > $(CURRENT_DIRECTORY)/configuration.h)
-endif # KCONFIG_CONFIG_HAL
 include $(call all-makefiles-under, $(CURRENT_DIRECTORY))
-endif # filter
 
 endif # !TARGET_SIMULATOR
 
