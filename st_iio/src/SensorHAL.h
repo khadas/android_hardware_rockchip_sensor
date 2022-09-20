@@ -90,6 +90,7 @@
 #define ST_SENSORS_LIST_48				"lsm6dso32"
 #define ST_SENSORS_LIST_49				"vl6180"
 #define ST_SENSORS_LIST_50				"ucs12cm0"
+#define ST_SENSORS_LIST_51				"vl53l0x"
 
 /*
  * IIO driver sensors suffix for sensors

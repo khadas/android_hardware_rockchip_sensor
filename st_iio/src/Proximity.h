@@ -21,10 +21,19 @@
 #include "HWSensorBase.h"
 
 /*
+ * Proximity informations, used for compatibility.
+ */
+#define ST_PROXIMITY_VL6180 0x01
+#define ST_PROXIMITY_VL53L0X 0x02
+
+#define ST_PROXIMITY_VL53L0X_MAX_RANGE_CM 120
+
+/*
  * class Proximity
  */
 class Proximity : public HWSensorBaseWithPollrate {
 private:
+	uint8_t info;
 #if (CONFIG_ST_HAL_ANDROID_VERSION >= ST_HAL_PIE_VERSION)
 #if (CONFIG_ST_HAL_ADDITIONAL_INFO_ENABLED)
 	int getSensorAdditionalInfoPayLoadFramesArray(additional_info_event_t **array_sensorAdditionalInfoPLFrames);

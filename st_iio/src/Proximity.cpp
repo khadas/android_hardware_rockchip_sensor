@@ -32,14 +32,20 @@ Proximity::Proximity(HWSensorBaseCommonData *data, const char *name,
 	sensor_t_data.stringType = SENSOR_STRING_TYPE_PROXIMITY;
 	sensor_t_data.flags |= SENSOR_FLAG_ON_CHANGE_MODE;
 
-	if (wakeup)
-		sensor_t_data.flags |= SENSOR_FLAG_WAKE_UP;
+	(void)wakeup;
+	sensor_t_data.flags |= SENSOR_FLAG_WAKE_UP;
 #else /* CONFIG_ST_HAL_ANDROID_VERSION */
 	(void)wakeup;
 #endif /* CONFIG_ST_HAL_ANDROID_VERSION */
 
 	sensor_t_data.resolution = 1.0f;
 	sensor_t_data.maxRange = 9.0f;
+
+	info = 0;
+	if (!strcmp(name, "VL6180 Proximity Sensor"))
+		info |= ST_PROXIMITY_VL6180;
+	else if (!strcmp(name, "VL53L0X Proximity Sensor"))
+		info |= ST_PROXIMITY_VL53L0X;
 }
 
 Proximity::~Proximity()
@@ -86,7 +92,16 @@ void Proximity::ProcessData(SensorBaseData *data)
 #endif /* CONFIG_ST_HAL_DEBUG_LEVEL */
 
 	/* driver reports meter, scale to cm */
-	data->processed[0] = data->raw[1] * 100;
+	if (info & ST_PROXIMITY_VL6180) {
+		data->processed[0] = data->raw[1] * 100;
+	} else if (info & ST_PROXIMITY_VL53L0X) {
+		data->processed[0] = data->raw[0] * 100;
+		if (data->processed[0] > ST_PROXIMITY_VL53L0X_MAX_RANGE_CM)
+			data->processed[0] = ST_PROXIMITY_VL53L0X_MAX_RANGE_CM;
+	} else {
+		data->processed[0] = 0;
+	}
+
 	sensor_event.distance = data->processed[0];
 	sensor_event.timestamp = data->timestamp;
 
