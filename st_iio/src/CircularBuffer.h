@@ -27,6 +27,7 @@
 
 typedef struct SensorBaseData {
 	float raw[4];
+	float orig[4];
 	float offset[4];
 	float processed[5];
 	int64_t timestamp;
