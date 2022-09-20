@@ -77,7 +77,7 @@ static float process_2byte_received(int input,
 		res = (float)((uint16_t)val);
 	}
 
-	return ((res + info->offset) * info->scale);
+	return res;
 }
 
 /**
@@ -106,7 +106,7 @@ static float process_3byte_received(int input,
 		res = (float)((uint32_t)val);
 	}
 
-	return ((res + info->offset) * info->scale);
+	return res;
 }
 
 /**
@@ -128,15 +128,20 @@ static int ProcessScanData(uint8_t *data,
 
 		switch (channels[k].bytes) {
 		case 1:
+			sensor_out_data->orig[k] = *(uint8_t *)(data + channels[k].location);
 			sensor_out_data->raw[k] = *(uint8_t *)(data + channels[k].location);
 			break;
 		case 2:
-			sensor_out_data->raw[k] = process_2byte_received(*(uint16_t *)
+			sensor_out_data->orig[k] = process_2byte_received(*(uint16_t *)
 					(data + channels[k].location), &channels[k]);
+			sensor_out_data->raw[k] = (sensor_out_data->orig[k] + channels[k].offset) *
+						  channels[k].scale;
 			break;
 		case 3:
-			sensor_out_data->raw[k] = process_3byte_received(*(uint32_t *)
+			sensor_out_data->orig[k] = process_3byte_received(*(uint32_t *)
 					(data + channels[k].location), &channels[k]);
+			sensor_out_data->raw[k] = (sensor_out_data->orig[k] + channels[k].offset) *
+						  channels[k].scale;
 			break;
 		case 4:
 			uint32_t val;
@@ -150,9 +155,11 @@ static int ProcessScanData(uint8_t *data,
 			val >>= channels[k].shift;
 			val &= channels[k].mask;
 			if (channels[k].sign) {
+				sensor_out_data->orig[k] = (float)(int32_t)val;
 				sensor_out_data->raw[k] = ((float)(int32_t)val +
 						channels[k].offset) * channels[k].scale;
 			} else {
+				sensor_out_data->orig[k] = (float)val;
 				sensor_out_data->raw[k] = ((float)val +
 						channels[k].offset) * channels[k].scale;
 			}
@@ -167,11 +174,13 @@ static int ProcessScanData(uint8_t *data,
 				if ((channels[k].scale == 1.0f) && (channels[k].offset == 0.0f)) {
 					sensor_out_data->timestamp = val;
 				} else {
+					sensor_out_data->orig[k] = (float)val;
 					sensor_out_data->raw[k] = (((float)val +
 							channels[k].offset) * channels[k].scale);
 				}
 			} else {
 				uint64_t val = *(uint64_t *)(data + channels[k].location);
+				sensor_out_data->orig[k] = val;
 				sensor_out_data->raw[k] = val;
 			}
 

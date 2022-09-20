@@ -120,6 +120,11 @@ void CorrelatedColorTemp::ProcessData(SensorBaseData *data)
 	sensor_event.data[1] = data->raw[0];
 	sensor_event.data[2] = data->raw[1];
 	sensor_event.data[3] = data->raw[2];
+	sensor_event.data[4] = data->raw[3];
+	sensor_event.data[5] = data->orig[0];
+	sensor_event.data[6] = data->orig[1];
+	sensor_event.data[7] = data->orig[2];
+	sensor_event.data[8] = data->orig[3];
 	sensor_event.timestamp = data->timestamp;
 
 	HWSensorBaseWithPollrate::WriteDataToPipe(data->pollrate_ns);
