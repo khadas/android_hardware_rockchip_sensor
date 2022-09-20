@@ -482,6 +482,23 @@ error_cleanup_array:
 	return ret;
 }
 
+int device_iio_utils::scan_channel_elements(const char *device_dir,
+					    struct device_iio_info_channel *channel)
+{
+	int ret;
+	char dfilename[DEVICE_IIO_MAX_FILENAME_LEN + 1];
+
+	memset(dfilename, 0, DEVICE_IIO_MAX_FILENAME_LEN + 1);
+
+	sprintf(dfilename,  "%s/%s_scale", device_dir, channel->name);
+	ret = sysfs_read_float(dfilename, &channel->scale);
+
+	sprintf(dfilename,  "%s/%s_offset", device_dir, channel->name);
+	ret = sysfs_read_float(dfilename, &channel->offset);
+
+	return 0;
+}
+
 int device_iio_utils::enable_events(const char *device_dir, bool enable)
 {
 	char event_el_dir[DEVICE_IIO_MAX_FILENAME_LEN + 1];

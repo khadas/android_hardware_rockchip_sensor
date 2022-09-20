@@ -100,6 +100,7 @@ public:
 	virtual void RemoveSensorDependency(SensorBase *p);
 
 	int ApplyFactoryCalibrationData(char *filename, time_t *last_modification);
+	void UpdateFactoryCalibrationData(void);
 
 	virtual void ProcessEvent(struct device_iio_events *event_data);
 	virtual int FlushData(int handle, bool lock_en_mute);

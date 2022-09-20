@@ -68,7 +68,9 @@ typedef enum {
  * kernel distro
  */
 #define DEVICE_IIO_EV_DIR_FIFO_DATA		0x04
+#define DEVICE_IIO_EV_DIR_NONE			0x05
 #define DEVICE_IIO_EV_TYPE_FIFO_FLUSH		0x06
+#define DEVICE_IIO_EV_TYPE_CALIB		0x07
 
 #define DISABLE_CHANNEL				0
 #define ENABLE_CHANNEL				1
@@ -154,6 +156,8 @@ class device_iio_utils {
 		static int scan_channel(const char *device_dir,
 					struct device_iio_info_channel **ci_array,
 					int *counter);
+		static int scan_channel_elements(const char *device_dir,
+					    struct device_iio_info_channel *channel);
 		static int support_injection_mode(const char *device_dir);
 		static int set_injection_mode(const char *device_dir, bool enable);
 		static int inject_data(const char *device_dir, unsigned char *data,
