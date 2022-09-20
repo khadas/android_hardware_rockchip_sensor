@@ -562,6 +562,19 @@ int HWSensorBase::ApplyFactoryCalibrationData(char *filename,
 #endif /* CONFIG_ST_HAL_FACTORY_CALIBRATION */
 }
 
+void HWSensorBase::UpdateFactoryCalibrationData(void)
+{
+	int i, err;
+	struct device_iio_info_channel *channel;
+
+	for (i = 0; i < common_data.num_channels; ++i) {
+		channel = &(common_data.channels[i]);
+		err = device_iio_utils::scan_channel_elements(
+					common_data.device_iio_sysfs_path,
+					channel);
+	}
+}
+
 void HWSensorBase::ProcessEvent(struct device_iio_events *event_data)
 {
 	uint8_t event_type, event_dir;
@@ -573,8 +586,10 @@ void HWSensorBase::ProcessEvent(struct device_iio_events *event_data)
 	    (event_dir == DEVICE_IIO_EV_DIR_FIFO_DATA))
 		ProcessFlushData(sensor_t_data.handle,
 				 event_data->event_timestamp);
+	else if ((event_type == DEVICE_IIO_EV_TYPE_CALIB) &&
+		 (event_dir == DEVICE_IIO_EV_DIR_NONE))
+		UpdateFactoryCalibrationData();
 }
-
 
 int HWSensorBase::FlushData(int handle, bool lock_en_mutex)
 {
